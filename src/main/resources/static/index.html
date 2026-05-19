@@ -27,6 +27,16 @@
                     <span class="status-dot"></span>
                     <span>데이터 불러오는 중</span>
                 </div>
+                <form id="loginForm" class="login-form">
+                    <input id="loginEmail" class="login-input" type="email" placeholder="이메일" autocomplete="email"/>
+                    <input id="loginPassword" class="login-input" type="password" placeholder="비밀번호"
+                           autocomplete="current-password"/>
+                    <button id="loginButton" class="secondary-button" type="submit">로그인</button>
+                </form>
+                <div id="memberBox" class="member-box" hidden>
+                    <span id="loginMemberName" class="member-name"></span>
+                    <button id="logoutButton" class="secondary-button" type="button">로그아웃</button>
+                </div>
             </div>
         </div>
     </header>
@@ -73,10 +83,10 @@
                     <span class="summary-badge">사용자</span>
                 </div>
 
-                <label class="field">
-                    <span class="label">예약자 이름</span>
-                    <input id="nameInput" class="name-input" type="text" placeholder="이름" autocomplete="name"/>
-                </label>
+                <div class="login-summary">
+                    <span class="summary-label">예약자</span>
+                    <strong id="summaryMember" class="summary-value">로그인이 필요합니다.</strong>
+                </div>
 
                 <div class="summary-list">
                     <div class="summary-row">
@@ -105,12 +115,7 @@
                     <h2 id="myReservationTitle" class="area-title">예약 조회·변경·취소</h2>
                 </div>
                 <div class="lookup-form">
-                    <label class="field lookup-field">
-                        <span class="label">예약자 이름</span>
-                        <input id="myReservationName" class="name-input" type="text" placeholder="이름"
-                               autocomplete="name"/>
-                    </label>
-                    <button id="myReservationButton" class="secondary-button" type="button">조회</button>
+                    <button id="myReservationButton" class="secondary-button" type="button">내 예약 불러오기</button>
                 </div>
             </div>
             <p id="myReservationMessage" class="message"></p>
