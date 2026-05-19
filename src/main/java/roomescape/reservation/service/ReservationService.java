@@ -5,6 +5,8 @@ import org.springframework.transaction.annotation.Transactional;
 import roomescape.global.exception.ConflictException;
 import roomescape.global.exception.InvalidRequestException;
 import roomescape.global.exception.NotFoundException;
+import roomescape.member.domain.Member;
+import roomescape.member.repository.MemberRepository;
 import roomescape.reservation.domain.Reservation;
 import roomescape.reservation.repository.ReservationRepository;
 import roomescape.reservationtime.domain.ReservationTime;
@@ -22,13 +24,16 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationTimeRepository reservationTimeRepository;
     private final ThemeRepository themeRepository;
+    private final MemberRepository memberRepository;
 
     public ReservationService(ReservationRepository reservationRepository,
                               ReservationTimeRepository reservationTimeRepository,
-                              ThemeRepository themeRepository) {
+                              ThemeRepository themeRepository,
+                              MemberRepository memberRepository) {
         this.reservationRepository = reservationRepository;
         this.reservationTimeRepository = reservationTimeRepository;
         this.themeRepository = themeRepository;
+        this.memberRepository = memberRepository;
     }
 
     @Transactional(readOnly = true)
@@ -37,7 +42,8 @@ public class ReservationService {
     }
 
     @Transactional
-    public Reservation create(String name, LocalDate date, Long timeId, Long themeId) {
+    public Reservation create(Long memberId, LocalDate date, Long timeId, Long themeId) {
+        Member member = findMember(memberId);
         ReservationTime time = findTime(timeId);
         Theme theme = findTheme(themeId);
 
@@ -49,18 +55,18 @@ public class ReservationService {
             throw new ConflictException("선택한 날짜와 시간에는 이미 해당 테마의 예약이 있습니다. 다른 시간을 선택해주세요.");
         }
 
-        Reservation reservation = Reservation.create(name, date, time, theme, LocalDateTime.now());
+        Reservation reservation = Reservation.create(member, date, time, theme, LocalDateTime.now());
 
         return reservationRepository.save(reservation);
     }
 
     @Transactional
-    public Reservation updateDateTime(Long id, String name, LocalDate date, Long timeId) {
+    public Reservation updateDateTime(Long id, Long memberId, LocalDate date, Long timeId) {
         LocalDateTime now = LocalDateTime.now();
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("변경할 예약이 존재하지 않습니다. 예약 목록을 확인해주세요."));
-        if (!reservation.isReservedBy(name)) {
-            throw new NotFoundException("해당 이름으로 예약을 찾을 수 없습니다. 예약 정보를 확인해주세요.");
+        if (!reservation.isReservedBy(memberId)) {
+            throw new NotFoundException("변경할 예약이 존재하지 않습니다. 예약 목록을 확인해주세요.");
         }
 
         ReservationTime time = findTime(timeId);
@@ -81,20 +87,20 @@ public class ReservationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Reservation> findByName(String name) {
-        return reservationRepository.findByName(name);
+    public List<Reservation> findByMemberId(Long memberId) {
+        return reservationRepository.findByMemberId(memberId);
     }
 
     @Transactional
-    public void cancel(Long id, String name) {
+    public void cancel(Long id, Long memberId) {
         Optional<Reservation> foundReservation = reservationRepository.findById(id);
         if (foundReservation.isEmpty()) {
             return;
         }
 
         Reservation reservation = foundReservation.get();
-        if (!reservation.isReservedBy(name)) {
-            throw new NotFoundException("해당 이름으로 예약을 찾을 수 없습니다. 예약 정보를 확인해주세요.");
+        if (!reservation.isReservedBy(memberId)) {
+            throw new NotFoundException("취소할 예약이 존재하지 않습니다. 예약 목록을 확인해주세요.");
         }
         if (reservation.isPast(LocalDateTime.now())) {
             throw new InvalidRequestException("이미 지난 예약은 취소할 수 없습니다.");
@@ -115,5 +121,10 @@ public class ReservationService {
     private Theme findTheme(Long themeId) {
         return themeRepository.findById(themeId)
                 .orElseThrow(() -> new NotFoundException("선택한 테마가 존재하지 않습니다. 다른 테마를 선택해주세요."));
+    }
+
+    private Member findMember(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new NotFoundException("로그인한 회원을 찾을 수 없습니다. 다시 로그인해주세요."));
     }
 }

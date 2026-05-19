@@ -2,6 +2,7 @@ package roomescape.reservation.domain;
 
 import lombok.Getter;
 import roomescape.global.exception.InvalidRequestException;
+import roomescape.member.domain.Member;
 import roomescape.reservationtime.domain.ReservationTime;
 import roomescape.theme.domain.Theme;
 
@@ -12,17 +13,17 @@ import java.util.Objects;
 @Getter
 public class Reservation {
     private final Long id;
-    private final String name;
+    private final Member member;
     private final LocalDate date;
     private final ReservationTime time;
     private final Theme theme;
 
-    public static Reservation create(String name,
+    public static Reservation create(Member member,
                                      LocalDate date,
                                      ReservationTime time,
                                      Theme theme,
                                      LocalDateTime now) {
-        Reservation reservation = new Reservation(name, date, time, theme);
+        Reservation reservation = new Reservation(member, date, time, theme);
         if (reservation.isPast(now)) {
             throw new InvalidRequestException("현재 시각 이후의 날짜와 시간을 선택해주세요.");
         }
@@ -30,8 +31,8 @@ public class Reservation {
         return reservation;
     }
 
-    public Reservation(String name, LocalDate date, ReservationTime time, Theme theme) {
-        this(null, name, date, time, theme);
+    public Reservation(Member member, LocalDate date, ReservationTime time, Theme theme) {
+        this(null, member, date, time, theme);
     }
 
     public Reservation changeDateTime(LocalDate newDate, ReservationTime newTime, LocalDateTime now) {
@@ -44,7 +45,7 @@ public class Reservation {
             throw new InvalidRequestException("변경할 날짜와 시간을 현재 예약과 다르게 선택해주세요.");
         }
 
-        Reservation changedReservation = new Reservation(id, name, newDate, newTime, theme);
+        Reservation changedReservation = new Reservation(id, member, newDate, newTime, theme);
         if (changedReservation.isPast(now)) {
             throw new InvalidRequestException("현재 시각 이후의 날짜와 시간을 선택해주세요.");
         }
@@ -52,25 +53,25 @@ public class Reservation {
         return changedReservation;
     }
 
-    public Reservation(Long id, String name, LocalDate date, ReservationTime time, Theme theme) {
-        validate(name, date, time, theme);
+    public Reservation(Long id, Member member, LocalDate date, ReservationTime time, Theme theme) {
+        validate(member, date, time, theme);
         this.id = id;
-        this.name = name;
+        this.member = member;
         this.date = date;
         this.time = time;
         this.theme = theme;
     }
 
-    private void validate(String name, LocalDate date, ReservationTime time, Theme theme) {
-        validateName(name);
+    private void validate(Member member, LocalDate date, ReservationTime time, Theme theme) {
+        validateMember(member);
         validateDate(date);
         validateTime(time);
         validateTheme(theme);
     }
 
-    private void validateName(String name) {
-        if (name == null || name.isBlank()) {
-            throw new InvalidRequestException("예약자 이름은 비어 있을 수 없습니다.");
+    private void validateMember(Member member) {
+        if (member == null) {
+            throw new InvalidRequestException("예약 회원은 비어 있을 수 없습니다.");
         }
     }
 
@@ -99,7 +100,7 @@ public class Reservation {
             throw new InvalidRequestException("이미 식별자가 존재하는 예약입니다.");
         }
 
-        return new Reservation(id, name, date, time, theme);
+        return new Reservation(id, member, date, time, theme);
     }
 
     private void validateId(Long id) {
@@ -112,8 +113,8 @@ public class Reservation {
         return LocalDateTime.of(date, time.getStartAt()).isBefore(now);
     }
 
-    public boolean isReservedBy(String name) {
-        return Objects.equals(this.name, name);
+    public boolean isReservedBy(Long memberId) {
+        return member != null && Objects.equals(member.getId(), memberId);
     }
 
     @Override

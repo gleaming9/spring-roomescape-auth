@@ -9,7 +9,7 @@ import java.util.Optional;
 public interface ReservationRepository {
     List<Reservation> findAll();
 
-    List<Reservation> findByName(String name);
+    List<Reservation> findByMemberId(Long memberId);
 
     Optional<Reservation> findById(Long id);
 

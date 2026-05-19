@@ -1,7 +1,6 @@
 package roomescape.reservation.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -37,7 +36,7 @@ public class ReservationController {
     public ResponseEntity<ReservationResponse> create(
             @Valid @RequestBody ReservationCreateRequest reservationCreateRequest) {
         Reservation reservation = reservationService.create(
-                reservationCreateRequest.name(),
+                reservationCreateRequest.memberId(),
                 reservationCreateRequest.date(),
                 reservationCreateRequest.timeId(),
                 reservationCreateRequest.themeId()
@@ -48,11 +47,11 @@ public class ReservationController {
     }
 
     @GetMapping
-    public ResponseEntity<ReservationsResponse> listByName(
-            @NotBlank(message = "예약자 이름은 비어 있을 수 없습니다.")
-            @RequestParam("name") String name
+    public ResponseEntity<ReservationsResponse> list(
+            @Positive(message = "회원 id는 1 이상의 숫자여야 합니다.")
+            @RequestParam Long memberId
     ) {
-        List<ReservationResponse> reservations = reservationService.findByName(name)
+        List<ReservationResponse> reservations = reservationService.findByMemberId(memberId)
                 .stream()
                 .map(ReservationResponse::from)
                 .toList();
@@ -69,7 +68,7 @@ public class ReservationController {
     ) {
         Reservation reservation = reservationService.updateDateTime(
                 id,
-                request.name(),
+                request.memberId(),
                 request.date(),
                 request.timeId()
         );
@@ -82,11 +81,10 @@ public class ReservationController {
     public ResponseEntity<Void> cancel(
             @Positive(message = "예약 id는 1 이상의 숫자여야 합니다.")
             @PathVariable Long id,
-
-            @NotBlank(message = "예약자 이름은 비어 있을 수 없습니다.")
-            @RequestParam("name") String name
+            @Positive(message = "회원 id는 1 이상의 숫자여야 합니다.")
+            @RequestParam Long memberId
     ) {
-        reservationService.cancel(id, name);
+        reservationService.cancel(id, memberId);
         return ResponseEntity.noContent().build();
     }
 }
