@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import roomescape.global.exception.ConflictException;
+import roomescape.member.domain.Member;
+import roomescape.member.repository.MemberRepository;
 import roomescape.reservation.domain.Reservation;
 import roomescape.reservation.repository.ReservationRepository;
 import roomescape.reservationtime.domain.ReservationTime;
@@ -16,6 +18,7 @@ import roomescape.theme.repository.ThemeRepository;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,6 +38,9 @@ class ThemeServiceTest {
 
     @Autowired
     private ReservationRepository reservationRepository;
+
+    @Autowired
+    private MemberRepository memberRepository;
 
     @Test
     @DisplayName("테마를 생성한다.")
@@ -108,7 +114,7 @@ class ThemeServiceTest {
                 "https://example.com/theme.png"
         );
         ReservationTime time = reservationTimeRepository.save(new ReservationTime(LocalTime.of(10, 0)));
-        reservationRepository.save(new Reservation("브라운", LocalDate.now().plusDays(1), time, theme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), LocalDate.now().plusDays(1), time, theme));
 
         // when, then
         assertThatThrownBy(() -> themeService.delete(theme.getId()))
@@ -127,10 +133,10 @@ class ThemeServiceTest {
         ReservationTime time2 = reservationTimeRepository.save(new ReservationTime(LocalTime.of(12, 0)));
 
         LocalDate now = LocalDate.of(2026, 10, 15);
-        reservationRepository.save(new Reservation("브라운", LocalDate.of(2026, 10, 8), time, popularTheme));
-        reservationRepository.save(new Reservation("레아", LocalDate.of(2026, 10, 8), time2, popularTheme));
-        reservationRepository.save(new Reservation("제이슨", LocalDate.of(2026, 10, 9), time, lessPopularTheme));
-        reservationRepository.save(new Reservation("포비", now, time, outOfRangeTheme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), LocalDate.of(2026, 10, 8), time, popularTheme));
+        reservationRepository.save(new Reservation(saveMember("레아"), LocalDate.of(2026, 10, 8), time2, popularTheme));
+        reservationRepository.save(new Reservation(saveMember("제이슨"), LocalDate.of(2026, 10, 9), time, lessPopularTheme));
+        reservationRepository.save(new Reservation(saveMember("포비"), now, time, outOfRangeTheme));
 
         // when
         List<Theme> popularThemes = themeService.findPopularThemes(7, now, 10);
@@ -139,6 +145,10 @@ class ThemeServiceTest {
         assertThat(popularThemes)
                 .extracting(Theme::getId)
                 .containsExactly(popularTheme.getId(), lessPopularTheme.getId());
+    }
+
+    private Member saveMember(String name) {
+        return memberRepository.save(new Member(UUID.randomUUID() + "@example.com", "password", name));
     }
 
 }

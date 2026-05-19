@@ -14,9 +14,11 @@ import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -24,6 +26,182 @@ public class MissionStepTest {
 
     @Autowired
     private ReservationController reservationController;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Test
+    @DisplayName("로그인하지 않은 사용자는 예약을 생성할 수 없다.")
+    void createReservation_withoutLogin_returnsUnauthorized() {
+        Map<String, Object> reservation = new HashMap<>();
+        reservation.put("date", LocalDate.now().plusDays(1).toString());
+        reservation.put("timeId", 1);
+        reservation.put("themeId", 1);
+
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(reservation)
+                .when().post("/reservations")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("이메일 또는 비밀번호가 일치하지 않으면 로그인할 수 없다.")
+    void login_fail_whenInvalidCredentials() {
+        Map<String, String> loginRequest = new HashMap<>();
+        loginRequest.put("email", "unknown@example.com");
+        loginRequest.put("password", "wrong-password");
+
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(loginRequest)
+                .when().post("/login")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("로그인에 성공하면 세션 쿠키와 현재 회원 정보를 반환한다.")
+    void login_success_returnsMemberAndSessionCookie() {
+        AuthenticatedMember member = saveMember("브라운");
+
+        Map<String, String> loginRequest = new HashMap<>();
+        loginRequest.put("email", member.email());
+        loginRequest.put("password", "password");
+
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(loginRequest)
+                .when().post("/login")
+                .then().log().all()
+                .statusCode(200)
+                .cookie("JSESSIONID", notNullValue())
+                .body("id", is(member.id().intValue()))
+                .body("email", is(member.email()))
+                .body("name", is(member.name()));
+    }
+
+    @Test
+    @DisplayName("로그인한 사용자는 현재 회원 정보를 조회할 수 있다.")
+    void findCurrentMember_withLogin_returnsLoginMember() {
+        AuthenticatedMember member = createMemberAndLogin("브라운");
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", member.sessionId())
+                .when().get("/members/me")
+                .then().log().all()
+                .statusCode(200)
+                .body("id", is(member.id().intValue()))
+                .body("email", is(member.email()))
+                .body("name", is(member.name()));
+    }
+
+    @Test
+    @DisplayName("로그인하지 않은 사용자는 현재 회원 정보를 조회할 수 없다.")
+    void findCurrentMember_withoutLogin_returnsUnauthorized() {
+        RestAssured.given().log().all()
+                .when().get("/members/me")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("로그아웃하면 기존 세션으로 인증 API를 사용할 수 없다.")
+    void logout_invalidatesSession() {
+        AuthenticatedMember member = createMemberAndLogin("브라운");
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", member.sessionId())
+                .when().post("/logout")
+                .then().log().all()
+                .statusCode(204);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", member.sessionId())
+                .when().get("/members/me")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("로그인하지 않은 사용자는 내 예약을 조회, 변경, 취소할 수 없다.")
+    void reservationApis_withoutLogin_returnUnauthorized() {
+        Map<String, Object> reservationUpdate = new HashMap<>();
+        reservationUpdate.put("date", LocalDate.now().plusDays(2).toString());
+        reservationUpdate.put("timeId", 1);
+
+        RestAssured.given().log().all()
+                .when().get("/reservations")
+                .then().log().all()
+                .statusCode(401);
+
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(reservationUpdate)
+                .when().patch("/reservations/1")
+                .then().log().all()
+                .statusCode(401);
+
+        RestAssured.given().log().all()
+                .when().delete("/reservations/1")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("내 예약 조회는 현재 로그인한 사용자의 예약만 반환한다.")
+    void findMyReservations_returnsOnlyLoginMemberReservations() {
+        AuthenticatedMember brown = createMemberAndLogin("브라운");
+        AuthenticatedMember pobi = createMemberAndLogin("포비");
+        String date = LocalDate.now().plusDays(1).toString();
+        int timeId = createTime("10:00");
+        int otherTimeId = createTime("12:00");
+        int themeId = createTheme("내 예약 조회 테스트");
+
+        int brownReservationId = createReservation(brown.sessionId(), date, timeId, themeId);
+        createReservation(pobi.sessionId(), date, otherTimeId, themeId);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", brown.sessionId())
+                .when().get("/reservations")
+                .then().log().all()
+                .statusCode(200)
+                .body("reservations.size()", is(1))
+                .body("reservations[0].id", is(brownReservationId))
+                .body("reservations[0].member.id", is(brown.id().intValue()))
+                .body("reservations[0].member.name", is(brown.name()));
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 예약은 변경하거나 취소할 수 없다.")
+    void updateOrCancelOtherMemberReservation_returnsNotFound() {
+        AuthenticatedMember brown = createMemberAndLogin("브라운");
+        AuthenticatedMember pobi = createMemberAndLogin("포비");
+        String date = LocalDate.now().plusDays(1).toString();
+        int timeId = createTime("10:00");
+        int otherTimeId = createTime("12:00");
+        int themeId = createTheme("인가 테스트");
+        int reservationId = createReservation(brown.sessionId(), date, timeId, themeId);
+
+        Map<String, Object> reservationUpdate = new HashMap<>();
+        reservationUpdate.put("date", LocalDate.now().plusDays(2).toString());
+        reservationUpdate.put("timeId", otherTimeId);
+
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", pobi.sessionId())
+                .body(reservationUpdate)
+                .when().patch("/reservations/" + reservationId)
+                .then().log().all()
+                .statusCode(404);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", pobi.sessionId())
+                .when().delete("/reservations/" + reservationId)
+                .then().log().all()
+                .statusCode(404);
+    }
 
     @Test
     @DisplayName("시간 관리 API")
@@ -85,8 +263,9 @@ public class MissionStepTest {
         theme.put("thumbnail", "https://example.com/theme.png");
 
         Map<String, Object> reservation = new HashMap<>();
-        reservation.put("name", "브라운");
         reservation.put("date", LocalDate.now().plusDays(1).toString());
+        AuthenticatedMember member = createMemberAndLogin("브라운");
+
         int timeId = RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
                 .body(time)
@@ -110,10 +289,13 @@ public class MissionStepTest {
 
         RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", member.sessionId())
                 .body(reservation)
                 .when().post("/reservations")
                 .then().log().all()
                 .statusCode(201)
+                .body("member.id", is(member.id().intValue()))
+                .body("member.name", is("브라운"))
                 .body("time.id", is(timeId))
                 .body("theme.id", is(themeId));
 
@@ -161,13 +343,14 @@ public class MissionStepTest {
                 .body("availableTimes.find { it.id == " + timeId + " }.isAvailable", is(true));
 
         Map<String, Object> reservation = new HashMap<>();
-        reservation.put("name", "브라운");
         reservation.put("date", date);
         reservation.put("timeId", timeId);
         reservation.put("themeId", themeId);
+        AuthenticatedMember member = createMemberAndLogin("브라운");
 
         RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", member.sessionId())
                 .body(reservation)
                 .when().post("/reservations")
                 .then().log().all()
@@ -193,5 +376,98 @@ public class MissionStepTest {
         }
 
         assertThat(isJdbcTemplateInjected).isFalse();
+    }
+
+    private AuthenticatedMember createMemberAndLogin(String name) {
+        AuthenticatedMember member = saveMember(name);
+
+        Map<String, String> loginRequest = new HashMap<>();
+        loginRequest.put("email", member.email());
+        loginRequest.put("password", "password");
+
+        String sessionId = RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(loginRequest)
+                .when().post("/login")
+                .then().log().all()
+                .statusCode(200)
+                .extract()
+                .cookie("JSESSIONID");
+
+        return new AuthenticatedMember(member.id(), member.email(), member.name(), sessionId);
+    }
+
+    private AuthenticatedMember saveMember(String name) {
+        String email = UUID.randomUUID() + "@example.com";
+        String password = "password";
+        jdbcTemplate.update(
+                "INSERT INTO member (email, password, name) VALUES (?, ?, ?)",
+                email,
+                password,
+                name
+        );
+
+        Long memberId = jdbcTemplate.queryForObject(
+                "SELECT id FROM member WHERE email = ?",
+                Long.class,
+                email
+        );
+
+        return new AuthenticatedMember(memberId, email, name, null);
+    }
+
+    private int createTime(String startAt) {
+        Map<String, String> time = new HashMap<>();
+        time.put("startAt", startAt);
+
+        return RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(time)
+                .when().post("/admin/times")
+                .then().log().all()
+                .statusCode(201)
+                .extract()
+                .path("id");
+    }
+
+    private int createTheme(String name) {
+        Map<String, String> theme = new HashMap<>();
+        theme.put("name", name);
+        theme.put("description", name + " 설명");
+        theme.put("thumbnail", "https://example.com/theme.png");
+
+        return RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(theme)
+                .when().post("/admin/themes")
+                .then().log().all()
+                .statusCode(201)
+                .extract()
+                .path("id");
+    }
+
+    private int createReservation(String sessionId, String date, int timeId, int themeId) {
+        Map<String, Object> reservation = new HashMap<>();
+        reservation.put("date", date);
+        reservation.put("timeId", timeId);
+        reservation.put("themeId", themeId);
+
+        return RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", sessionId)
+                .body(reservation)
+                .when().post("/reservations")
+                .then().log().all()
+                .statusCode(201)
+                .extract()
+                .path("id");
+    }
+
+    private record AuthenticatedMember(
+            Long id,
+            String email,
+            String name,
+            String sessionId
+    ) {
     }
 }

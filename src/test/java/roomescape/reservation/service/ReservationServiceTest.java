@@ -8,6 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 import roomescape.global.exception.ConflictException;
 import roomescape.global.exception.InvalidRequestException;
 import roomescape.global.exception.NotFoundException;
+import roomescape.member.domain.Member;
+import roomescape.member.repository.MemberRepository;
 import roomescape.reservation.domain.Reservation;
 import roomescape.reservation.repository.ReservationRepository;
 import roomescape.reservationtime.domain.ReservationTime;
@@ -17,6 +19,7 @@ import roomescape.theme.repository.ThemeRepository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,6 +47,9 @@ class ReservationServiceTest {
 
     @Autowired
     private ThemeRepository themeRepository;
+
+    @Autowired
+    private MemberRepository memberRepository;
 
     @Test
     @DisplayName("예약을 생성한다.")
@@ -94,7 +100,10 @@ class ReservationServiceTest {
         Theme theme = saveTheme();
 
         // when, then
-        assertThatThrownBy(() -> reservationService.create(NAME, FUTURE_DATE, NOT_FOUND_ID, theme.getId()))
+        Member member = saveMember(NAME);
+
+        // when, then
+        assertThatThrownBy(() -> reservationService.create(member.getId(), FUTURE_DATE, NOT_FOUND_ID, theme.getId()))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -105,7 +114,10 @@ class ReservationServiceTest {
         ReservationTime time = saveReservationTime(10);
 
         // when, then
-        assertThatThrownBy(() -> reservationService.create(NAME, FUTURE_DATE, time.getId(), NOT_FOUND_ID))
+        Member member = saveMember(NAME);
+
+        // when, then
+        assertThatThrownBy(() -> reservationService.create(member.getId(), FUTURE_DATE, time.getId(), NOT_FOUND_ID))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -139,20 +151,21 @@ class ReservationServiceTest {
         Reservation reservation = createDefaultReservation();
 
         // when
-        reservationService.cancel(reservation.getId(), NAME);
+        reservationService.cancel(reservation.getId(), reservation.getMember().getId());
 
         // then
         assertThat(reservationService.findAll()).isEmpty();
     }
 
     @Test
-    @DisplayName("해당 이름으로 예약을 찾을 수 없으면 예약 취소 시 예외가 발생한다.")
-    public void cancel_fail_whenReservationNotFoundByName() {
+    @DisplayName("다른 회원의 예약을 취소하면 예외가 발생한다.")
+    public void cancel_fail_whenReservationNotOwnedByMember() {
         // given
         Reservation reservation = createDefaultReservation();
+        Member otherMember = saveMember(OTHER_NAME);
 
         // when, then
-        assertThatThrownBy(() -> reservationService.cancel(reservation.getId(), OTHER_NAME))
+        assertThatThrownBy(() -> reservationService.cancel(reservation.getId(), otherMember.getId()))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -160,7 +173,10 @@ class ReservationServiceTest {
     @DisplayName("존재하지 않는 예약 취소를 요청해도 성공한다.")
     public void cancel_success_whenReservationNotFound() {
         // when
-        reservationService.cancel(NOT_FOUND_ID, NAME);
+        Member member = saveMember(NAME);
+
+        // when
+        reservationService.cancel(NOT_FOUND_ID, member.getId());
 
         // then
         assertThat(reservationService.findAll()).isEmpty();
@@ -173,7 +189,7 @@ class ReservationServiceTest {
         Reservation reservation = savePastReservation();
 
         // when, then
-        assertThatThrownBy(() -> reservationService.cancel(reservation.getId(), NAME))
+        assertThatThrownBy(() -> reservationService.cancel(reservation.getId(), reservation.getMember().getId()))
                 .isInstanceOf(InvalidRequestException.class);
     }
 
@@ -187,7 +203,7 @@ class ReservationServiceTest {
         // when
         Reservation updatedReservation = reservationService.updateDateTime(
                 reservation.getId(),
-                NAME,
+                reservation.getMember().getId(),
                 NEXT_FUTURE_DATE,
                 newTime.getId()
         );
@@ -215,7 +231,7 @@ class ReservationServiceTest {
         // when, then
         assertThatThrownBy(() -> reservationService.updateDateTime(
                 reservation.getId(),
-                NAME,
+                reservation.getMember().getId(),
                 NEXT_FUTURE_DATE,
                 occupiedTime.getId()
         ))
@@ -233,7 +249,7 @@ class ReservationServiceTest {
         // when, then
         assertThatThrownBy(() -> reservationService.updateDateTime(
                 reservation.getId(),
-                NAME,
+                reservation.getMember().getId(),
                 FUTURE_DATE,
                 time.getId()
         ))
@@ -250,7 +266,7 @@ class ReservationServiceTest {
         // when, then
         assertThatThrownBy(() -> reservationService.updateDateTime(
                 reservation.getId(),
-                NAME,
+                reservation.getMember().getId(),
                 PAST_DATE,
                 pastTime.getId()
         ))
@@ -267,7 +283,7 @@ class ReservationServiceTest {
         // when, then
         assertThatThrownBy(() -> reservationService.updateDateTime(
                 reservation.getId(),
-                NAME,
+                reservation.getMember().getId(),
                 FUTURE_DATE,
                 newTime.getId()
         ))
@@ -279,11 +295,12 @@ class ReservationServiceTest {
     }
 
     private Reservation createReservation(String name, LocalDate date, ReservationTime time, Theme theme) {
-        return reservationService.create(name, date, time.getId(), theme.getId());
+        Member member = saveMember(name);
+        return reservationService.create(member.getId(), date, time.getId(), theme.getId());
     }
 
     private Reservation savePastReservation() {
-        return reservationRepository.save(new Reservation(NAME, PAST_DATE, saveReservationTime(14), saveTheme()));
+        return reservationRepository.save(new Reservation(saveMember(NAME), PAST_DATE, saveReservationTime(14), saveTheme()));
     }
 
     private ReservationTime saveReservationTime(int hour) {
@@ -296,5 +313,9 @@ class ReservationServiceTest {
                 "우테코 레벨2를 탈출하는 내용입니다.",
                 "https://example.com/theme.png"
         ));
+    }
+
+    private Member saveMember(String name) {
+        return memberRepository.save(new Member(UUID.randomUUID() + "@example.com", "password", name));
     }
 }

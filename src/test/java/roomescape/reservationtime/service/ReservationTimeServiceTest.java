@@ -8,6 +8,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import roomescape.global.exception.ConflictException;
 import roomescape.global.exception.NotFoundException;
+import roomescape.member.domain.Member;
+import roomescape.member.repository.MemberRepository;
 import roomescape.reservation.domain.Reservation;
 import roomescape.reservation.repository.ReservationRepository;
 import roomescape.reservationtime.domain.ReservationTime;
@@ -18,6 +20,7 @@ import roomescape.theme.repository.ThemeRepository;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,6 +40,9 @@ class ReservationTimeServiceTest {
 
     @Autowired
     private ReservationRepository reservationRepository;
+
+    @Autowired
+    private MemberRepository memberRepository;
 
     @Test
     @DisplayName("예약 시간을 생성한다.")
@@ -79,7 +85,7 @@ class ReservationTimeServiceTest {
         // given
         ReservationTime reservationTime = reservationTimeRepository.save(new ReservationTime(LocalTime.of(10, 0)));
         Theme theme = themeRepository.save(new Theme("레벨2 탈출", "우테코 레벨2를 탈출하는 내용입니다.", "https://example.com/theme.png"));
-        reservationRepository.save(new Reservation("브라운", LocalDate.of(2026, 5, 14), reservationTime, theme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), LocalDate.of(2026, 5, 14), reservationTime, theme));
 
         // when, then
         assertThatThrownBy(() -> reservationTimeService.delete(reservationTime.getId()))
@@ -109,9 +115,9 @@ class ReservationTimeServiceTest {
 
         LocalDate targetDate = LocalDate.of(2023, 8, 5);
 
-        reservationRepository.save(new Reservation("브라운", targetDate, time, targetTheme));
-        reservationRepository.save(new Reservation("브라운", LocalDate.of(2024, 9, 10), time, targetTheme));
-        reservationRepository.save(new Reservation("브라운", targetDate, time, nonTargetTheme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), targetDate, time, targetTheme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), LocalDate.of(2024, 9, 10), time, targetTheme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), targetDate, time, nonTargetTheme));
 
         // when
         List<ReservationTimeAvailability> availableTimes = reservationTimeService.findAvailableTimes(targetDate, targetTheme.getId());
@@ -133,5 +139,9 @@ class ReservationTimeServiceTest {
         // when, then
         assertThatThrownBy(() -> reservationTimeService.findAvailableTimes(date, notFoundThemeId))
                 .isInstanceOf(NotFoundException.class);
+    }
+
+    private Member saveMember(String name) {
+        return memberRepository.save(new Member(UUID.randomUUID() + "@example.com", "password", name));
     }
 }
