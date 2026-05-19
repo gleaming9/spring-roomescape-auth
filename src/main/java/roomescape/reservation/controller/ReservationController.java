@@ -1,7 +1,5 @@
 package roomescape.reservation.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import roomescape.auth.support.SessionConst;
+import roomescape.auth.support.LoginMember;
+import roomescape.auth.support.LoginMemberInfo;
 import roomescape.reservation.domain.Reservation;
 import roomescape.reservation.dto.ReservationCreateRequest;
 import roomescape.reservation.dto.ReservationResponse;
@@ -36,11 +35,10 @@ public class ReservationController {
 
     @PostMapping
     public ResponseEntity<ReservationResponse> create(
-            @Valid @RequestBody ReservationCreateRequest reservationCreateRequest,
-            HttpServletRequest request) {
-        Long memberId = extractLoginMemberId(request);
+            @LoginMember LoginMemberInfo loginMember,
+            @Valid @RequestBody ReservationCreateRequest reservationCreateRequest) {
         Reservation reservation = reservationService.create(
-                memberId,
+                loginMember.id(),
                 reservationCreateRequest.date(),
                 reservationCreateRequest.timeId(),
                 reservationCreateRequest.themeId()
@@ -51,9 +49,8 @@ public class ReservationController {
     }
 
     @GetMapping
-    public ResponseEntity<ReservationsResponse> list(HttpServletRequest request) {
-        Long memberId = extractLoginMemberId(request);
-        List<ReservationResponse> reservations = reservationService.findByMemberId(memberId)
+    public ResponseEntity<ReservationsResponse> list(@LoginMember LoginMemberInfo loginMember) {
+        List<ReservationResponse> reservations = reservationService.findByMemberId(loginMember.id())
                 .stream()
                 .map(ReservationResponse::from)
                 .toList();
@@ -66,13 +63,13 @@ public class ReservationController {
             @Positive(message = "예약 id는 1 이상의 숫자여야 합니다.")
             @PathVariable Long id,
 
-            @Valid @RequestBody ReservationUpdateRequest reservationUpdateRequest,
-            HttpServletRequest request
+            @LoginMember LoginMemberInfo loginMember,
+
+            @Valid @RequestBody ReservationUpdateRequest reservationUpdateRequest
     ) {
-        Long memberId = extractLoginMemberId(request);
         Reservation reservation = reservationService.updateDateTime(
                 id,
-                memberId,
+                loginMember.id(),
                 reservationUpdateRequest.date(),
                 reservationUpdateRequest.timeId()
         );
@@ -85,15 +82,9 @@ public class ReservationController {
     public ResponseEntity<Void> cancel(
             @Positive(message = "예약 id는 1 이상의 숫자여야 합니다.")
             @PathVariable Long id,
-            HttpServletRequest request
+            @LoginMember LoginMemberInfo loginMember
     ) {
-        Long memberId = extractLoginMemberId(request);
-        reservationService.cancel(id, memberId);
+        reservationService.cancel(id, loginMember.id());
         return ResponseEntity.noContent().build();
-    }
-
-    private Long extractLoginMemberId(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        return (Long) session.getAttribute(SessionConst.LOGIN_MEMBER_ID);
     }
 }
