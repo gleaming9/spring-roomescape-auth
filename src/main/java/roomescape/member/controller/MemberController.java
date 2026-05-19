@@ -32,14 +32,6 @@ public class MemberController {
 
     private Long extractLoginMemberId(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-        if (session == null) {
-            throw new UnauthorizedException("로그인이 필요합니다.");
-        }
-
-        Object memberId = session.getAttribute(SessionConst.LOGIN_MEMBER_ID);
-        if (memberId instanceof Long id) {
-            return id;
-        }
-        throw new UnauthorizedException("로그인이 필요합니다.");
+        return (Long) session.getAttribute(SessionConst.LOGIN_MEMBER_ID);
     }
 }
