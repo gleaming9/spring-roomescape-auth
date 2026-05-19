@@ -9,13 +9,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import roomescape.auth.dto.LoginRequest;
 import roomescape.auth.service.AuthService;
+import roomescape.auth.support.SessionConst;
 import roomescape.member.domain.Member;
 import roomescape.member.dto.MemberResponse;
 
 @RestController
 public class AuthController {
-    private static final String LOGIN_MEMBER_ID = "loginMemberId";
-
     private final AuthService authService;
 
     public AuthController(AuthService authService) {
@@ -28,7 +27,7 @@ public class AuthController {
         Member member = authService.login(request.email(), request.password());
 
         HttpSession session = httpServletRequest.getSession(true);
-        session.setAttribute(LOGIN_MEMBER_ID, member.getId());
+        session.setAttribute(SessionConst.LOGIN_MEMBER_ID, member.getId());
 
         return ResponseEntity.ok(MemberResponse.from(member));
     }

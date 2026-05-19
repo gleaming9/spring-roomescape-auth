@@ -1,5 +1,7 @@
 package roomescape.reservation.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
@@ -10,8 +12,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import roomescape.auth.support.SessionConst;
+import roomescape.global.exception.UnauthorizedException;
 import roomescape.reservation.domain.Reservation;
 import roomescape.reservation.dto.ReservationCreateRequest;
 import roomescape.reservation.dto.ReservationResponse;
@@ -34,9 +37,11 @@ public class ReservationController {
 
     @PostMapping
     public ResponseEntity<ReservationResponse> create(
-            @Valid @RequestBody ReservationCreateRequest reservationCreateRequest) {
+            @Valid @RequestBody ReservationCreateRequest reservationCreateRequest,
+            HttpServletRequest request) {
+        Long memberId = extractLoginMemberId(request);
         Reservation reservation = reservationService.create(
-                reservationCreateRequest.memberId(),
+                memberId,
                 reservationCreateRequest.date(),
                 reservationCreateRequest.timeId(),
                 reservationCreateRequest.themeId()
@@ -47,10 +52,8 @@ public class ReservationController {
     }
 
     @GetMapping
-    public ResponseEntity<ReservationsResponse> list(
-            @Positive(message = "회원 id는 1 이상의 숫자여야 합니다.")
-            @RequestParam Long memberId
-    ) {
+    public ResponseEntity<ReservationsResponse> list(HttpServletRequest request) {
+        Long memberId = extractLoginMemberId(request);
         List<ReservationResponse> reservations = reservationService.findByMemberId(memberId)
                 .stream()
                 .map(ReservationResponse::from)
@@ -64,13 +67,15 @@ public class ReservationController {
             @Positive(message = "예약 id는 1 이상의 숫자여야 합니다.")
             @PathVariable Long id,
 
-            @Valid @RequestBody ReservationUpdateRequest request
+            @Valid @RequestBody ReservationUpdateRequest reservationUpdateRequest,
+            HttpServletRequest request
     ) {
+        Long memberId = extractLoginMemberId(request);
         Reservation reservation = reservationService.updateDateTime(
                 id,
-                request.memberId(),
-                request.date(),
-                request.timeId()
+                memberId,
+                reservationUpdateRequest.date(),
+                reservationUpdateRequest.timeId()
         );
 
         return ResponseEntity.ok(ReservationResponse.from(reservation));
@@ -81,10 +86,23 @@ public class ReservationController {
     public ResponseEntity<Void> cancel(
             @Positive(message = "예약 id는 1 이상의 숫자여야 합니다.")
             @PathVariable Long id,
-            @Positive(message = "회원 id는 1 이상의 숫자여야 합니다.")
-            @RequestParam Long memberId
+            HttpServletRequest request
     ) {
+        Long memberId = extractLoginMemberId(request);
         reservationService.cancel(id, memberId);
         return ResponseEntity.noContent().build();
+    }
+
+    private Long extractLoginMemberId(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            throw new UnauthorizedException("로그인이 필요합니다.");
+        }
+
+        Object memberId = session.getAttribute(SessionConst.LOGIN_MEMBER_ID);
+        if (memberId instanceof Long id) {
+            return id;
+        }
+        throw new UnauthorizedException("로그인이 필요합니다.");
     }
 }
