@@ -191,6 +191,65 @@ public class MissionStepTest {
     }
 
     @Test
+    @DisplayName("모바일 앱은 세션 쿠키를 직접 전달해 예약을 생성하고 내 예약을 조회할 수 있다.")
+    void reservationApis_mobileRequestWithSessionCookie_createAndFindMyReservations() {
+        AuthenticatedMember brown = createMemberAndLogin("브라운");
+        AuthenticatedMember pobi = createMemberAndLogin("포비");
+        String date = LocalDate.now().plusDays(1).toString();
+        int timeId = createTime("15:00");
+        int otherTimeId = createTime("15:30");
+        int themeId = createTheme("모바일 예약 테스트");
+        createReservation(pobi.sessionId(), date, otherTimeId, themeId);
+
+        Map<String, Object> reservation = new HashMap<>();
+        reservation.put("date", date);
+        reservation.put("timeId", timeId);
+        reservation.put("themeId", themeId);
+
+        int reservationId = RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .header("Cookie", "JSESSIONID=" + brown.sessionId())
+                .body(reservation)
+                .when().post("/reservations")
+                .then().log().all()
+                .statusCode(201)
+                .body("member.id", is(brown.id().intValue()))
+                .body("member.name", is(brown.name()))
+                .body("time.id", is(timeId))
+                .body("theme.id", is(themeId))
+                .extract()
+                .path("id");
+
+        RestAssured.given().log().all()
+                .header("Cookie", "JSESSIONID=" + brown.sessionId())
+                .when().get("/reservations")
+                .then().log().all()
+                .statusCode(200)
+                .body("reservations.size()", is(1))
+                .body("reservations[0].id", is(reservationId))
+                .body("reservations[0].member.id", is(brown.id().intValue()))
+                .body("reservations[0].member.name", is(brown.name()));
+    }
+
+    @Test
+    @DisplayName("모바일 앱은 세션 쿠키를 직접 전달해 로그아웃하면 같은 쿠키를 다시 사용할 수 없다.")
+    void logout_mobileRequestWithSessionCookie_invalidatesSession() {
+        AuthenticatedMember member = createMemberAndLogin("브라운");
+
+        RestAssured.given().log().all()
+                .header("Cookie", "JSESSIONID=" + member.sessionId())
+                .when().post("/logout")
+                .then().log().all()
+                .statusCode(204);
+
+        RestAssured.given().log().all()
+                .header("Cookie", "JSESSIONID=" + member.sessionId())
+                .when().get("/members/me")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
     @DisplayName("로그아웃하면 기존 세션으로 인증 API를 사용할 수 없다.")
     void logout_invalidatesSession() {
         AuthenticatedMember member = createMemberAndLogin("브라운");
