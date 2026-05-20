@@ -14,7 +14,7 @@
 -- Theme 12: 예약 없음
 
 INSERT INTO member (id, email, password, name)
-VALUES (1, 'popular@example.com', 'password', '인기테마테스트');
+VALUES (1, 'popular@example.com', '$2a$10$ehrv167owuDhm9r4S9gK5.KRBjVZt1l1XuuJKjyjGdioSqYflUaGm', '인기테마테스트');
 
 INSERT INTO theme (id, name, description, thumbnail)
 VALUES (1, 'Theme 1', 'Popular theme rank 1', 'https://example.com/theme-1.png'),

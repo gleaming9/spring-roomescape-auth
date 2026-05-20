@@ -1,6 +1,6 @@
 INSERT INTO member (id, email, password, name)
-VALUES (1, 'brown@example.com', 'password', '브라운'),
-       (2, 'demo@example.com', 'password', '데모');
+VALUES (1, 'brown@example.com', '$2a$10$oQHYDAbw.CEJjCIwDX8nf.K7NErkkOgdqo00e0NKO.YCZJqS4XOjK', '브라운'),
+       (2, 'demo@example.com', '$2a$10$dDQNmrl1tIajnwq.Qrs58ekHaMn.yUvHWWCqsFFHzOOd4PqyOzVq.', '데모');
 
 INSERT INTO theme (id, name, description, thumbnail)
 VALUES (1, 'Theme 1', 'Popular theme rank 1', 'https://example.com/theme-1.png'),

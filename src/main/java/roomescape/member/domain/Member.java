@@ -47,10 +47,6 @@ public class Member {
         return new Member(id, email, password, name);
     }
 
-    public boolean hasPassword(String password) {
-        return Objects.equals(this.password, password);
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

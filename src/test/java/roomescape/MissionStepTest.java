@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
+import roomescape.auth.support.PasswordEncoder;
 import roomescape.reservation.controller.ReservationController;
 
 import java.lang.reflect.Field;
@@ -29,6 +30,9 @@ public class MissionStepTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Test
     @DisplayName("로그인하지 않은 사용자는 예약을 생성할 수 없다.")
@@ -433,11 +437,11 @@ public class MissionStepTest {
 
     private AuthenticatedMember saveMember(String name) {
         String email = UUID.randomUUID() + "@example.com";
-        String password = "password";
+        String encodedPassword = passwordEncoder.encode("password");
         jdbcTemplate.update(
                 "INSERT INTO member (email, password, name) VALUES (?, ?, ?)",
                 email,
-                password,
+                encodedPassword,
                 name
         );
 

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import roomescape.auth.support.PasswordEncoder;
 import roomescape.global.exception.ConflictException;
 import roomescape.member.domain.Member;
 import roomescape.member.repository.MemberRepository;
@@ -41,6 +42,9 @@ class ThemeServiceTest {
 
     @Autowired
     private MemberRepository memberRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Test
     @DisplayName("테마를 생성한다.")
@@ -148,7 +152,7 @@ class ThemeServiceTest {
     }
 
     private Member saveMember(String name) {
-        return memberRepository.save(new Member(UUID.randomUUID() + "@example.com", "password", name));
+        return memberRepository.save(new Member(UUID.randomUUID() + "@example.com", passwordEncoder.encode("password"), name));
     }
 
 }

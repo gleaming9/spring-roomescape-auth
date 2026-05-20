@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ReservationTest {
 
-    private final Member member = new Member(1L, "brown@example.com", "password", "브라운");
+    private final Member member = new Member(1L, "brown@example.com", "encoded-password", "브라운");
     private final ReservationTime time = new ReservationTime(1L, LocalTime.of(10, 0));
     private final Theme theme = new Theme(1L, "레벨2 탈출", "우테코 레벨2를 탈출하는 내용입니다.", "https://example.com/theme.png");
 

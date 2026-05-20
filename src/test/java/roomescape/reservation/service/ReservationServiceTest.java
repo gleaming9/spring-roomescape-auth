@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import roomescape.auth.support.PasswordEncoder;
 import roomescape.global.exception.ConflictException;
 import roomescape.global.exception.InvalidRequestException;
 import roomescape.global.exception.NotFoundException;
@@ -50,6 +51,9 @@ class ReservationServiceTest {
 
     @Autowired
     private MemberRepository memberRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Test
     @DisplayName("예약을 생성한다.")
@@ -316,6 +320,6 @@ class ReservationServiceTest {
     }
 
     private Member saveMember(String name) {
-        return memberRepository.save(new Member(UUID.randomUUID() + "@example.com", "password", name));
+        return memberRepository.save(new Member(UUID.randomUUID() + "@example.com", passwordEncoder.encode("password"), name));
     }
 }
