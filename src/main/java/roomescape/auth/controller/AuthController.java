@@ -26,6 +26,11 @@ public class AuthController {
                                                 HttpServletRequest httpServletRequest) {
         Member member = authService.login(request.email(), request.password());
 
+        HttpSession oldSession = httpServletRequest.getSession(false);
+        if (oldSession != null) {
+            oldSession.invalidate();
+        }
+
         HttpSession session = httpServletRequest.getSession(true);
         session.setAttribute(SessionConst.LOGIN_MEMBER_ID, member.getId());
 

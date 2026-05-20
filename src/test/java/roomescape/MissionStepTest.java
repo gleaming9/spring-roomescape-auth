@@ -83,6 +83,40 @@ public class MissionStepTest {
     }
 
     @Test
+    @DisplayName("기존 세션이 있는 상태에서 로그인하면 기존 세션을 무효화하고 새 세션을 발급한다.")
+    void login_withExistingSession_invalidatesOldSessionAndCreatesNewSession() {
+        AuthenticatedMember member = createMemberAndLogin("브라운");
+
+        Map<String, String> loginRequest = new HashMap<>();
+        loginRequest.put("email", member.email());
+        loginRequest.put("password", "password");
+
+        String newSessionId = RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", member.sessionId())
+                .body(loginRequest)
+                .when().post("/login")
+                .then().log().all()
+                .statusCode(200)
+                .extract()
+                .cookie("JSESSIONID");
+
+        assertThat(newSessionId).isNotEqualTo(member.sessionId());
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", member.sessionId())
+                .when().get("/members/me")
+                .then().log().all()
+                .statusCode(401);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", newSessionId)
+                .when().get("/members/me")
+                .then().log().all()
+                .statusCode(200);
+    }
+
+    @Test
     @DisplayName("로그인한 사용자는 현재 회원 정보를 조회할 수 있다.")
     void findCurrentMember_withLogin_returnsLoginMember() {
         AuthenticatedMember member = createMemberAndLogin("브라운");
