@@ -145,6 +145,52 @@ public class MissionStepTest {
     }
 
     @Test
+    @DisplayName("모바일 앱은 로그인 응답의 세션 쿠키를 직접 전달해 현재 회원 정보를 조회할 수 있다.")
+    void findCurrentMember_mobileRequestWithSessionCookie_returnsLoginMember() {
+        AuthenticatedMember member = saveMember("브라운");
+        Map<String, String> loginRequest = new HashMap<>();
+        loginRequest.put("email", member.email());
+        loginRequest.put("password", "password");
+
+        String sessionId = RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(loginRequest)
+                .when().post("/login")
+                .then().log().all()
+                .statusCode(200)
+                .extract()
+                .cookie("JSESSIONID");
+
+        RestAssured.given().log().all()
+                .header("Cookie", "JSESSIONID=" + sessionId)
+                .when().get("/members/me")
+                .then().log().all()
+                .statusCode(200)
+                .body("id", is(member.id().intValue()))
+                .body("email", is(member.email()))
+                .body("name", is(member.name()));
+    }
+
+    @Test
+    @DisplayName("모바일 앱 요청에 세션 쿠키가 없으면 현재 회원 정보를 조회할 수 없다.")
+    void findCurrentMember_mobileRequestWithoutSessionCookie_returnsUnauthorized() {
+        RestAssured.given().log().all()
+                .when().get("/members/me")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("모바일 앱 요청의 세션 쿠키가 유효하지 않으면 현재 회원 정보를 조회할 수 없다.")
+    void findCurrentMember_mobileRequestWithInvalidSessionCookie_returnsUnauthorized() {
+        RestAssured.given().log().all()
+                .header("Cookie", "JSESSIONID=invalid-session-id")
+                .when().get("/members/me")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
     @DisplayName("로그아웃하면 기존 세션으로 인증 API를 사용할 수 없다.")
     void logout_invalidatesSession() {
         AuthenticatedMember member = createMemberAndLogin("브라운");
