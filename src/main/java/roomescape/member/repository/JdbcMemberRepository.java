@@ -9,8 +9,11 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import roomescape.global.exception.InfrastructureException;
 import roomescape.member.domain.Member;
+import roomescape.member.domain.Role;
 
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Optional;
 
 @Repository
@@ -21,7 +24,9 @@ public class JdbcMemberRepository implements MemberRepository {
             resultSet.getLong("id"),
             resultSet.getString("email"),
             resultSet.getString("password"),
-            resultSet.getString("name")
+            resultSet.getString("name"),
+            Role.valueOf(resultSet.getString("role")),
+            resultSet.getObject("store_id", Long.class)
     );
 
     private final JdbcTemplate jdbcTemplate;
@@ -33,7 +38,7 @@ public class JdbcMemberRepository implements MemberRepository {
     @Override
     public Optional<Member> findById(Long id) {
         String sql = """
-                SELECT id, email, password, name
+                SELECT id, email, password, name, role, store_id
                 FROM member
                 WHERE id = ?
                 """;
@@ -46,7 +51,7 @@ public class JdbcMemberRepository implements MemberRepository {
     @Override
     public Optional<Member> findByEmail(String email) {
         String sql = """
-                SELECT id, email, password, name
+                SELECT id, email, password, name, role, store_id
                 FROM member
                 WHERE email = ?
                 """;
@@ -76,8 +81,8 @@ public class JdbcMemberRepository implements MemberRepository {
 
     private int insert(Member member, KeyHolder keyHolder) {
         String sql = """
-                INSERT INTO member (email, password, name)
-                VALUES (?, ?, ?)
+                INSERT INTO member (email, password, name, role, store_id)
+                VALUES (?, ?, ?, ?, ?)
                 """;
 
         return jdbcTemplate.update(connection -> {
@@ -85,7 +90,18 @@ public class JdbcMemberRepository implements MemberRepository {
             preparedStatement.setString(1, member.getEmail());
             preparedStatement.setString(2, member.getPassword());
             preparedStatement.setString(3, member.getName());
+            preparedStatement.setString(4, member.getRole().name());
+            setNullableLong(preparedStatement, 5, member.getStoreId());
             return preparedStatement;
         }, keyHolder);
+    }
+
+    private void setNullableLong(PreparedStatement preparedStatement, int parameterIndex, Long value) throws SQLException {
+        if (value == null) {
+            preparedStatement.setNull(parameterIndex, Types.BIGINT);
+            return;
+        }
+
+        preparedStatement.setLong(parameterIndex, value);
     }
 }

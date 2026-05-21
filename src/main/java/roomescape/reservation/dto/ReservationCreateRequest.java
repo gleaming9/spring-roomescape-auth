@@ -7,6 +7,10 @@ import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
 
 public record ReservationCreateRequest(
+        @NotNull(message = "매장 id는 비어 있을 수 없습니다.")
+        @Positive(message = "매장 id는 1 이상의 숫자여야 합니다.")
+        Long storeId,
+
         @NotNull(message = "예약 날짜는 비어 있을 수 없습니다.")
         @JsonFormat(pattern = "yyyy-MM-dd")
         LocalDate date,

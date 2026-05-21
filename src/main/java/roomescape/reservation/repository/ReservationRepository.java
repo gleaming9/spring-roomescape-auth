@@ -13,7 +13,7 @@ public interface ReservationRepository {
 
     Optional<Reservation> findById(Long id);
 
-    List<Reservation> findByDateAndThemeId(LocalDate date, Long themeId);
+    List<Reservation> findByStoreIdAndDateAndThemeId(Long storeId, LocalDate date, Long themeId);
 
     Reservation save(Reservation reservation);
 
@@ -23,9 +23,9 @@ public interface ReservationRepository {
 
     boolean existsByThemeId(Long themeId);
 
-    boolean existsConflict(LocalDate date, Long timeId, Long themeId);
+    boolean existsConflict(Long storeId, LocalDate date, Long timeId, Long themeId);
 
-    boolean existsConflictExcluding(LocalDate date, Long timeId, Long themeId, Long id);
+    boolean existsConflictExcluding(Long storeId, LocalDate date, Long timeId, Long themeId, Long id);
 
     void deleteById(Long id);
 }

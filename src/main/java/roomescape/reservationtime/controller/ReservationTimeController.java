@@ -36,11 +36,13 @@ public class ReservationTimeController {
     }
 
     @GetMapping("/availability")
-    public ResponseEntity<AvailableTimesResponse> getAvailableTimes(@RequestParam("date") LocalDate date,
+    public ResponseEntity<AvailableTimesResponse> getAvailableTimes(@Positive(message = "매장 id는 1 이상의 숫자여야 합니다.")
+                                                                    @RequestParam("storeId") Long storeId,
+                                                                    @RequestParam("date") LocalDate date,
                                                                     @Positive(message = "테마 id는 1 이상의 숫자여야 합니다.")
                                                                     @RequestParam("themeId") Long themeId) {
         List<ReservationTimeAvailability> timeAvailabilities =
-                reservationTimeService.findAvailableTimes(date, themeId);
+                reservationTimeService.findAvailableTimes(storeId, date, themeId);
 
         return ResponseEntity.ok(AvailableTimesResponse.from(timeAvailabilities.stream()
                 .map(AvailableTimeResponse::from)

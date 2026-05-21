@@ -39,6 +39,7 @@ public class ReservationController {
             @Valid @RequestBody ReservationCreateRequest reservationCreateRequest) {
         Reservation reservation = reservationService.create(
                 loginMember.id(),
+                reservationCreateRequest.storeId(),
                 reservationCreateRequest.date(),
                 reservationCreateRequest.timeId(),
                 reservationCreateRequest.themeId()

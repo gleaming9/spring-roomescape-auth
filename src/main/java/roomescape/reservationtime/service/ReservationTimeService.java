@@ -8,6 +8,7 @@ import roomescape.reservation.domain.Reservation;
 import roomescape.reservation.repository.ReservationRepository;
 import roomescape.reservationtime.domain.ReservationTime;
 import roomescape.reservationtime.repository.ReservationTimeRepository;
+import roomescape.store.repository.StoreRepository;
 import roomescape.theme.repository.ThemeRepository;
 
 import java.time.LocalDate;
@@ -21,14 +22,17 @@ import java.util.stream.Collectors;
 public class ReservationTimeService {
     private final ReservationTimeRepository reservationTimeRepository;
     private final ThemeRepository themeRepository;
+    private final StoreRepository storeRepository;
     private final ReservationRepository reservationRepository;
 
     public ReservationTimeService(
             ReservationTimeRepository reservationTimeRepository,
             ThemeRepository themeRepository,
+            StoreRepository storeRepository,
             ReservationRepository reservationRepository) {
         this.reservationTimeRepository = reservationTimeRepository;
         this.themeRepository = themeRepository;
+        this.storeRepository = storeRepository;
         this.reservationRepository = reservationRepository;
     }
 
@@ -56,12 +60,15 @@ public class ReservationTimeService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReservationTimeAvailability> findAvailableTimes(LocalDate date, Long themeId) {
+    public List<ReservationTimeAvailability> findAvailableTimes(Long storeId, LocalDate date, Long themeId) {
+        if (!storeRepository.existsById(storeId)) {
+            throw new NotFoundException("선택한 매장이 존재하지 않습니다. 다른 매장을 선택해주세요.");
+        }
         if (!themeRepository.existsById(themeId)) {
             throw new NotFoundException("선택한 테마가 존재하지 않습니다. 다른 테마를 선택해주세요.");
         }
 
-        List<Reservation> reservations = reservationRepository.findByDateAndThemeId(date, themeId);
+        List<Reservation> reservations = reservationRepository.findByStoreIdAndDateAndThemeId(storeId, date, themeId);
         Set<ReservationTime> reservedTimes = reservations.stream()
                 .map(Reservation::getTime)
                 .collect(Collectors.toCollection(HashSet::new));

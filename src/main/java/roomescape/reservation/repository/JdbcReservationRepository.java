@@ -9,6 +9,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import roomescape.global.exception.InfrastructureException;
 import roomescape.member.domain.Member;
+import roomescape.member.domain.Role;
 import roomescape.reservation.domain.Reservation;
 import roomescape.reservationtime.domain.ReservationTime;
 import roomescape.theme.domain.Theme;
@@ -28,7 +29,9 @@ public class JdbcReservationRepository implements ReservationRepository {
                 resultSet.getLong("member_id"),
                 resultSet.getString("member_email"),
                 resultSet.getString("member_password"),
-                resultSet.getString("member_name")
+                resultSet.getString("member_name"),
+                Role.valueOf(resultSet.getString("member_role")),
+                resultSet.getObject("member_store_id", Long.class)
         );
 
         ReservationTime reservationTime = new ReservationTime(
@@ -46,6 +49,7 @@ public class JdbcReservationRepository implements ReservationRepository {
         return new Reservation(
                 resultSet.getLong("reservation_id"),
                 member,
+                resultSet.getLong("store_id"),
                 resultSet.getDate("date").toLocalDate(),
                 reservationTime,
                 theme
@@ -63,11 +67,14 @@ public class JdbcReservationRepository implements ReservationRepository {
         String sql = """
                 SELECT
                     r.id AS reservation_id,
+                    r.store_id,
                     r.date,
                     m.id AS member_id,
                     m.email AS member_email,
                     m.password AS member_password,
                     m.name AS member_name,
+                    m.role AS member_role,
+                    m.store_id AS member_store_id,
                     t.id AS time_id,
                     t.start_at,
                     th.id AS theme_id,
@@ -91,11 +98,14 @@ public class JdbcReservationRepository implements ReservationRepository {
         String sql = """
                 SELECT
                     r.id AS reservation_id,
+                    r.store_id,
                     r.date,
                     m.id AS member_id,
                     m.email AS member_email,
                     m.password AS member_password,
                     m.name AS member_name,
+                    m.role AS member_role,
+                    m.store_id AS member_store_id,
                     t.id AS time_id,
                     t.start_at,
                     th.id AS theme_id,
@@ -120,11 +130,14 @@ public class JdbcReservationRepository implements ReservationRepository {
         String sql = """
                 SELECT
                     r.id AS reservation_id,
+                    r.store_id,
                     r.date,
                     m.id AS member_id,
                     m.email AS member_email,
                     m.password AS member_password,
                     m.name AS member_name,
+                    m.role AS member_role,
+                    m.store_id AS member_store_id,
                     t.id AS time_id,
                     t.start_at,
                     th.id AS theme_id,
@@ -147,15 +160,18 @@ public class JdbcReservationRepository implements ReservationRepository {
     }
 
     @Override
-    public List<Reservation> findByDateAndThemeId(LocalDate date, Long themeId) {
+    public List<Reservation> findByStoreIdAndDateAndThemeId(Long storeId, LocalDate date, Long themeId) {
         String sql = """
                 SELECT
                     r.id AS reservation_id,
+                    r.store_id,
                     r.date,
                     m.id AS member_id,
                     m.email AS member_email,
                     m.password AS member_password,
                     m.name AS member_name,
+                    m.role AS member_role,
+                    m.store_id AS member_store_id,
                     t.id AS time_id,
                     t.start_at,
                     th.id AS theme_id,
@@ -169,10 +185,10 @@ public class JdbcReservationRepository implements ReservationRepository {
                     ON r.time_id = t.id
                 INNER JOIN theme th
                     ON r.theme_id = th.id
-                WHERE r.date = ? AND r.theme_id = ?
+                WHERE r.store_id = ? AND r.date = ? AND r.theme_id = ?
                 """;
 
-        return jdbcTemplate.query(sql, reservationRowMapper, date, themeId);
+        return jdbcTemplate.query(sql, reservationRowMapper, storeId, date, themeId);
     }
 
     @Override
@@ -210,8 +226,8 @@ public class JdbcReservationRepository implements ReservationRepository {
 
     private int insert(Reservation reservation, KeyHolder keyHolder) {
         String sql = """
-                INSERT INTO reservation (member_id, date, time_id, theme_id)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO reservation (member_id, store_id, date, time_id, theme_id)
+                VALUES (?, ?, ?, ?, ?)
                 """;
 
         return jdbcTemplate.update(connection -> {
@@ -220,9 +236,10 @@ public class JdbcReservationRepository implements ReservationRepository {
                     new String[]{"id"}
             );
             preparedStatement.setLong(1, reservation.getMember().getId());
-            preparedStatement.setDate(2, Date.valueOf(reservation.getDate()));
-            preparedStatement.setLong(3, reservation.getTime().getId());
-            preparedStatement.setLong(4, reservation.getTheme().getId());
+            preparedStatement.setLong(2, reservation.getStoreId());
+            preparedStatement.setDate(3, Date.valueOf(reservation.getDate()));
+            preparedStatement.setLong(4, reservation.getTime().getId());
+            preparedStatement.setLong(5, reservation.getTheme().getId());
             return preparedStatement;
         }, keyHolder);
     }
@@ -283,29 +300,29 @@ public class JdbcReservationRepository implements ReservationRepository {
     }
 
     @Override
-    public boolean existsConflict(LocalDate date, Long timeId, Long themeId) {
+    public boolean existsConflict(Long storeId, LocalDate date, Long timeId, Long themeId) {
         String sql = """
                 SELECT EXISTS (
                     SELECT 1
                     FROM reservation
-                    WHERE date = ? AND time_id = ? AND theme_id = ?
+                    WHERE store_id = ? AND date = ? AND time_id = ? AND theme_id = ?
                 )
                 """;
 
-        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, date, timeId, themeId));
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, storeId, date, timeId, themeId));
     }
 
     @Override
-    public boolean existsConflictExcluding(LocalDate date, Long timeId, Long themeId, Long id) {
+    public boolean existsConflictExcluding(Long storeId, LocalDate date, Long timeId, Long themeId, Long id) {
         String sql = """
                 SELECT EXISTS (
                     SELECT 1
                     FROM reservation
-                    WHERE date = ? AND time_id = ? AND theme_id = ? AND id != ?
+                    WHERE store_id = ? AND date = ? AND time_id = ? AND theme_id = ? AND id != ?
                 )
                 """;
 
-        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, date, timeId, themeId, id));
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, storeId, date, timeId, themeId, id));
     }
 
     @Override

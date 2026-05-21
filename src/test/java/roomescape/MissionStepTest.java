@@ -2,6 +2,7 @@ package roomescape;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,7 @@ import static org.hamcrest.Matchers.notNullValue;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class MissionStepTest {
+    private static final int DEFAULT_STORE_ID = 1;
 
     @Autowired
     private ReservationController reservationController;
@@ -34,10 +36,22 @@ public class MissionStepTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.update(
+                "INSERT INTO store (id, name) VALUES (?, ?), (?, ?)",
+                DEFAULT_STORE_ID,
+                "우테코 강남점",
+                2,
+                "우테코 잠실점"
+        );
+    }
+
     @Test
     @DisplayName("로그인하지 않은 사용자는 예약을 생성할 수 없다.")
     void createReservation_withoutLogin_returnsUnauthorized() {
         Map<String, Object> reservation = new HashMap<>();
+        reservation.put("storeId", DEFAULT_STORE_ID);
         reservation.put("date", LocalDate.now().plusDays(1).toString());
         reservation.put("timeId", 1);
         reservation.put("themeId", 1);
@@ -202,6 +216,7 @@ public class MissionStepTest {
         createReservation(pobi.sessionId(), date, otherTimeId, themeId);
 
         Map<String, Object> reservation = new HashMap<>();
+        reservation.put("storeId", DEFAULT_STORE_ID);
         reservation.put("date", date);
         reservation.put("timeId", timeId);
         reservation.put("themeId", themeId);
@@ -406,6 +421,7 @@ public class MissionStepTest {
         theme.put("thumbnail", "https://example.com/theme.png");
 
         Map<String, Object> reservation = new HashMap<>();
+        reservation.put("storeId", DEFAULT_STORE_ID);
         reservation.put("date", LocalDate.now().plusDays(1).toString());
         AuthenticatedMember member = createMemberAndLogin("브라운");
 
@@ -480,12 +496,13 @@ public class MissionStepTest {
                 .path("id");
 
         RestAssured.given().log().all()
-                .when().get("/times/availability?date=" + date + "&themeId=" + themeId)
+                .when().get("/times/availability?storeId=" + DEFAULT_STORE_ID + "&date=" + date + "&themeId=" + themeId)
                 .then().log().all()
                 .statusCode(200)
                 .body("availableTimes.find { it.id == " + timeId + " }.isAvailable", is(true));
 
         Map<String, Object> reservation = new HashMap<>();
+        reservation.put("storeId", DEFAULT_STORE_ID);
         reservation.put("date", date);
         reservation.put("timeId", timeId);
         reservation.put("themeId", themeId);
@@ -500,7 +517,7 @@ public class MissionStepTest {
                 .statusCode(201);
 
         RestAssured.given().log().all()
-                .when().get("/times/availability?date=" + date + "&themeId=" + themeId)
+                .when().get("/times/availability?storeId=" + DEFAULT_STORE_ID + "&date=" + date + "&themeId=" + themeId)
                 .then().log().all()
                 .statusCode(200)
                 .body("availableTimes.find { it.id == " + timeId + " }.isAvailable", is(false));
@@ -591,6 +608,7 @@ public class MissionStepTest {
 
     private int createReservation(String sessionId, String date, int timeId, int themeId) {
         Map<String, Object> reservation = new HashMap<>();
+        reservation.put("storeId", DEFAULT_STORE_ID);
         reservation.put("date", date);
         reservation.put("timeId", timeId);
         reservation.put("themeId", themeId);

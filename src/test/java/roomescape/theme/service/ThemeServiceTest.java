@@ -1,9 +1,11 @@
 package roomescape.theme.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import roomescape.auth.support.PasswordEncoder;
 import roomescape.global.exception.ConflictException;
@@ -28,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Transactional
 class ThemeServiceTest {
 
+    private static final Long STORE_ID = 1L;
+
     @Autowired
     private ThemeService themeService;
 
@@ -45,6 +49,20 @@ class ThemeServiceTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.update(
+                "INSERT INTO store (id, name) VALUES (?, ?), (?, ?)",
+                STORE_ID,
+                "우테코 강남점",
+                2,
+                "우테코 잠실점"
+        );
+    }
 
     @Test
     @DisplayName("테마를 생성한다.")
@@ -118,7 +136,7 @@ class ThemeServiceTest {
                 "https://example.com/theme.png"
         );
         ReservationTime time = reservationTimeRepository.save(new ReservationTime(LocalTime.of(10, 0)));
-        reservationRepository.save(new Reservation(saveMember("브라운"), LocalDate.now().plusDays(1), time, theme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), STORE_ID, LocalDate.now().plusDays(1), time, theme));
 
         // when, then
         assertThatThrownBy(() -> themeService.delete(theme.getId()))
@@ -137,10 +155,10 @@ class ThemeServiceTest {
         ReservationTime time2 = reservationTimeRepository.save(new ReservationTime(LocalTime.of(12, 0)));
 
         LocalDate now = LocalDate.of(2026, 10, 15);
-        reservationRepository.save(new Reservation(saveMember("브라운"), LocalDate.of(2026, 10, 8), time, popularTheme));
-        reservationRepository.save(new Reservation(saveMember("레아"), LocalDate.of(2026, 10, 8), time2, popularTheme));
-        reservationRepository.save(new Reservation(saveMember("제이슨"), LocalDate.of(2026, 10, 9), time, lessPopularTheme));
-        reservationRepository.save(new Reservation(saveMember("포비"), now, time, outOfRangeTheme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), STORE_ID, LocalDate.of(2026, 10, 8), time, popularTheme));
+        reservationRepository.save(new Reservation(saveMember("레아"), STORE_ID, LocalDate.of(2026, 10, 8), time2, popularTheme));
+        reservationRepository.save(new Reservation(saveMember("제이슨"), STORE_ID, LocalDate.of(2026, 10, 9), time, lessPopularTheme));
+        reservationRepository.save(new Reservation(saveMember("포비"), STORE_ID, now, time, outOfRangeTheme));
 
         // when
         List<Theme> popularThemes = themeService.findPopularThemes(7, now, 10);

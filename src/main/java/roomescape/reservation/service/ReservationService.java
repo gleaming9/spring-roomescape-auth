@@ -11,6 +11,7 @@ import roomescape.reservation.domain.Reservation;
 import roomescape.reservation.repository.ReservationRepository;
 import roomescape.reservationtime.domain.ReservationTime;
 import roomescape.reservationtime.repository.ReservationTimeRepository;
+import roomescape.store.repository.StoreRepository;
 import roomescape.theme.domain.Theme;
 import roomescape.theme.repository.ThemeRepository;
 
@@ -25,15 +26,18 @@ public class ReservationService {
     private final ReservationTimeRepository reservationTimeRepository;
     private final ThemeRepository themeRepository;
     private final MemberRepository memberRepository;
+    private final StoreRepository storeRepository;
 
     public ReservationService(ReservationRepository reservationRepository,
                               ReservationTimeRepository reservationTimeRepository,
                               ThemeRepository themeRepository,
-                              MemberRepository memberRepository) {
+                              MemberRepository memberRepository,
+                              StoreRepository storeRepository) {
         this.reservationRepository = reservationRepository;
         this.reservationTimeRepository = reservationTimeRepository;
         this.themeRepository = themeRepository;
         this.memberRepository = memberRepository;
+        this.storeRepository = storeRepository;
     }
 
     @Transactional(readOnly = true)
@@ -42,12 +46,17 @@ public class ReservationService {
     }
 
     @Transactional
-    public Reservation create(Long memberId, LocalDate date, Long timeId, Long themeId) {
+    public Reservation create(Long memberId, Long storeId, LocalDate date, Long timeId, Long themeId) {
         Member member = findMember(memberId);
+        if (!storeRepository.existsById(storeId)) {
+            throw new NotFoundException("선택한 매장이 존재하지 않습니다. 다른 매장을 선택해주세요.");
+        }
+
         ReservationTime time = findTime(timeId);
         Theme theme = findTheme(themeId);
 
         if (reservationRepository.existsConflict(
+                storeId,
                 date,
                 time.getId(),
                 theme.getId()
@@ -55,7 +64,7 @@ public class ReservationService {
             throw new ConflictException("선택한 날짜와 시간에는 이미 해당 테마의 예약이 있습니다. 다른 시간을 선택해주세요.");
         }
 
-        Reservation reservation = Reservation.create(member, date, time, theme, LocalDateTime.now());
+        Reservation reservation = Reservation.create(member, storeId, date, time, theme, LocalDateTime.now());
 
         return reservationRepository.save(reservation);
     }
@@ -72,6 +81,7 @@ public class ReservationService {
         ReservationTime time = findTime(timeId);
 
         if (reservationRepository.existsConflictExcluding(
+                reservation.getStoreId(),
                 date,
                 time.getId(),
                 reservation.getTheme().getId(),

@@ -1,9 +1,11 @@
 package roomescape.reservation.service;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import roomescape.auth.support.PasswordEncoder;
 import roomescape.global.exception.ConflictException;
@@ -29,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Transactional
 class ReservationServiceTest {
 
+    private static final Long STORE_ID = 1L;
     private static final String NAME = "브라운";
     private static final String OTHER_NAME = "레아";
     private static final LocalDate TODAY = LocalDate.now();
@@ -54,6 +57,20 @@ class ReservationServiceTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.update(
+                "INSERT INTO store (id, name) VALUES (?, ?), (?, ?)",
+                STORE_ID,
+                "우테코 강남점",
+                2,
+                "우테코 잠실점"
+        );
+    }
 
     @Test
     @DisplayName("예약을 생성한다.")
@@ -98,6 +115,19 @@ class ReservationServiceTest {
     }
 
     @Test
+    @DisplayName("존재하지 않는 매장으로 예약하면 예외가 발생한다.")
+    public void create_fail_whenStoreNotFound() {
+        // given
+        ReservationTime time = saveReservationTime(10);
+        Theme theme = saveTheme();
+        Member member = saveMember(NAME);
+
+        // when, then
+        assertThatThrownBy(() -> reservationService.create(member.getId(), NOT_FOUND_ID, FUTURE_DATE, time.getId(), theme.getId()))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
     @DisplayName("존재하지 않는 예약 시간으로 예약하면 예외가 발생한다.")
     public void create_fail_whenReservationTimeNotFound() {
         // given
@@ -107,7 +137,7 @@ class ReservationServiceTest {
         Member member = saveMember(NAME);
 
         // when, then
-        assertThatThrownBy(() -> reservationService.create(member.getId(), FUTURE_DATE, NOT_FOUND_ID, theme.getId()))
+        assertThatThrownBy(() -> reservationService.create(member.getId(), STORE_ID, FUTURE_DATE, NOT_FOUND_ID, theme.getId()))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -121,7 +151,7 @@ class ReservationServiceTest {
         Member member = saveMember(NAME);
 
         // when, then
-        assertThatThrownBy(() -> reservationService.create(member.getId(), FUTURE_DATE, time.getId(), NOT_FOUND_ID))
+        assertThatThrownBy(() -> reservationService.create(member.getId(), STORE_ID, FUTURE_DATE, time.getId(), NOT_FOUND_ID))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -300,11 +330,11 @@ class ReservationServiceTest {
 
     private Reservation createReservation(String name, LocalDate date, ReservationTime time, Theme theme) {
         Member member = saveMember(name);
-        return reservationService.create(member.getId(), date, time.getId(), theme.getId());
+        return reservationService.create(member.getId(), STORE_ID, date, time.getId(), theme.getId());
     }
 
     private Reservation savePastReservation() {
-        return reservationRepository.save(new Reservation(saveMember(NAME), PAST_DATE, saveReservationTime(14), saveTheme()));
+        return reservationRepository.save(new Reservation(saveMember(NAME), STORE_ID, PAST_DATE, saveReservationTime(14), saveTheme()));
     }
 
     private ReservationTime saveReservationTime(int hour) {

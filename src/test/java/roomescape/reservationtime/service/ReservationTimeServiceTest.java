@@ -1,10 +1,12 @@
 package roomescape.reservationtime.service;
 
 import org.assertj.core.groups.Tuple;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import roomescape.auth.support.PasswordEncoder;
 import roomescape.global.exception.ConflictException;
@@ -30,6 +32,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Transactional
 class ReservationTimeServiceTest {
 
+    private static final Long STORE_ID = 1L;
+
     @Autowired
     private ReservationTimeService reservationTimeService;
 
@@ -47,6 +51,20 @@ class ReservationTimeServiceTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.update(
+                "INSERT INTO store (id, name) VALUES (?, ?), (?, ?)",
+                STORE_ID,
+                "우테코 강남점",
+                2,
+                "우테코 잠실점"
+        );
+    }
 
     @Test
     @DisplayName("예약 시간을 생성한다.")
@@ -89,7 +107,7 @@ class ReservationTimeServiceTest {
         // given
         ReservationTime reservationTime = reservationTimeRepository.save(new ReservationTime(LocalTime.of(10, 0)));
         Theme theme = themeRepository.save(new Theme("레벨2 탈출", "우테코 레벨2를 탈출하는 내용입니다.", "https://example.com/theme.png"));
-        reservationRepository.save(new Reservation(saveMember("브라운"), LocalDate.of(2026, 5, 14), reservationTime, theme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), STORE_ID, LocalDate.of(2026, 5, 14), reservationTime, theme));
 
         // when, then
         assertThatThrownBy(() -> reservationTimeService.delete(reservationTime.getId()))
@@ -119,12 +137,12 @@ class ReservationTimeServiceTest {
 
         LocalDate targetDate = LocalDate.of(2023, 8, 5);
 
-        reservationRepository.save(new Reservation(saveMember("브라운"), targetDate, time, targetTheme));
-        reservationRepository.save(new Reservation(saveMember("브라운"), LocalDate.of(2024, 9, 10), time, targetTheme));
-        reservationRepository.save(new Reservation(saveMember("브라운"), targetDate, time, nonTargetTheme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), STORE_ID, targetDate, time, targetTheme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), STORE_ID, LocalDate.of(2024, 9, 10), time, targetTheme));
+        reservationRepository.save(new Reservation(saveMember("브라운"), STORE_ID, targetDate, time, nonTargetTheme));
 
         // when
-        List<ReservationTimeAvailability> availableTimes = reservationTimeService.findAvailableTimes(targetDate, targetTheme.getId());
+        List<ReservationTimeAvailability> availableTimes = reservationTimeService.findAvailableTimes(STORE_ID, targetDate, targetTheme.getId());
 
         // then
         assertThat(availableTimes).hasSize(2)
@@ -141,7 +159,7 @@ class ReservationTimeServiceTest {
         Long notFoundThemeId = 37L;
 
         // when, then
-        assertThatThrownBy(() -> reservationTimeService.findAvailableTimes(date, notFoundThemeId))
+        assertThatThrownBy(() -> reservationTimeService.findAvailableTimes(STORE_ID, date, notFoundThemeId))
                 .isInstanceOf(NotFoundException.class);
     }
 

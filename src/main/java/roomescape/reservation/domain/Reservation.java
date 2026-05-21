@@ -14,16 +14,22 @@ import java.util.Objects;
 public class Reservation {
     private final Long id;
     private final Member member;
+    private final Long storeId;
     private final LocalDate date;
     private final ReservationTime time;
     private final Theme theme;
 
     public static Reservation create(Member member,
+                                     Long storeId,
                                      LocalDate date,
                                      ReservationTime time,
                                      Theme theme,
                                      LocalDateTime now) {
-        Reservation reservation = new Reservation(member, date, time, theme);
+        Reservation reservation = new Reservation(member, storeId, date, time, theme);
+        return validateFutureReservation(reservation, now);
+    }
+
+    private static Reservation validateFutureReservation(Reservation reservation, LocalDateTime now) {
         if (reservation.isPast(now)) {
             throw new InvalidRequestException("현재 시각 이후의 날짜와 시간을 선택해주세요.");
         }
@@ -31,8 +37,8 @@ public class Reservation {
         return reservation;
     }
 
-    public Reservation(Member member, LocalDate date, ReservationTime time, Theme theme) {
-        this(null, member, date, time, theme);
+    public Reservation(Member member, Long storeId, LocalDate date, ReservationTime time, Theme theme) {
+        this(null, member, storeId, date, time, theme);
     }
 
     public Reservation changeDateTime(LocalDate newDate, ReservationTime newTime, LocalDateTime now) {
@@ -45,7 +51,7 @@ public class Reservation {
             throw new InvalidRequestException("변경할 날짜와 시간을 현재 예약과 다르게 선택해주세요.");
         }
 
-        Reservation changedReservation = new Reservation(id, member, newDate, newTime, theme);
+        Reservation changedReservation = new Reservation(id, member, storeId, newDate, newTime, theme);
         if (changedReservation.isPast(now)) {
             throw new InvalidRequestException("현재 시각 이후의 날짜와 시간을 선택해주세요.");
         }
@@ -53,17 +59,19 @@ public class Reservation {
         return changedReservation;
     }
 
-    public Reservation(Long id, Member member, LocalDate date, ReservationTime time, Theme theme) {
-        validate(member, date, time, theme);
+    public Reservation(Long id, Member member, Long storeId, LocalDate date, ReservationTime time, Theme theme) {
+        validate(member, storeId, date, time, theme);
         this.id = id;
         this.member = member;
+        this.storeId = storeId;
         this.date = date;
         this.time = time;
         this.theme = theme;
     }
 
-    private void validate(Member member, LocalDate date, ReservationTime time, Theme theme) {
+    private void validate(Member member, Long storeId, LocalDate date, ReservationTime time, Theme theme) {
         validateMember(member);
+        validateStoreId(storeId);
         validateDate(date);
         validateTime(time);
         validateTheme(theme);
@@ -72,6 +80,12 @@ public class Reservation {
     private void validateMember(Member member) {
         if (member == null) {
             throw new InvalidRequestException("예약 회원은 비어 있을 수 없습니다.");
+        }
+    }
+
+    private void validateStoreId(Long storeId) {
+        if (storeId == null) {
+            throw new InvalidRequestException("예약 매장은 비어 있을 수 없습니다.");
         }
     }
 
@@ -100,7 +114,7 @@ public class Reservation {
             throw new InvalidRequestException("이미 식별자가 존재하는 예약입니다.");
         }
 
-        return new Reservation(id, member, date, time, theme);
+        return new Reservation(id, member, storeId, date, time, theme);
     }
 
     private void validateId(Long id) {

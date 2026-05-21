@@ -16,6 +16,10 @@
 INSERT INTO member (id, email, password, name)
 VALUES (1, 'popular@example.com', '$2a$10$ehrv167owuDhm9r4S9gK5.KRBjVZt1l1XuuJKjyjGdioSqYflUaGm', '인기테마테스트');
 
+INSERT INTO store (id, name)
+VALUES (1, '우테코 강남점'),
+       (2, '우테코 잠실점');
+
 INSERT INTO theme (id, name, description, thumbnail)
 VALUES (1, 'Theme 1', 'Popular theme rank 1', 'https://example.com/theme-1.png'),
        (2, 'Theme 2', 'Popular theme rank 2', 'https://example.com/theme-2.png'),
@@ -39,100 +43,102 @@ VALUES (1, '10:00:00'),
        (6, '20:00:00');
 
 -- Theme 1: 기간 내 예약 10개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (1, '2026-04-29', 1, 1, 1),
-       (2, '2026-04-29', 2, 1, 1),
-       (3, '2026-04-30', 1, 1, 1),
-       (4, '2026-04-30', 2, 1, 1),
-       (5, '2026-05-01', 1, 1, 1),
-       (6, '2026-05-01', 2, 1, 1),
-       (7, '2026-05-02', 1, 1, 1),
-       (8, '2026-05-03', 1, 1, 1),
-       (9, '2026-05-04', 1, 1, 1),
-       (10, '2026-05-05', 1, 1, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (1, '2026-04-29', 1, 1, 1, 1),
+       (2, '2026-04-29', 2, 1, 1, 1),
+       (3, '2026-04-30', 1, 1, 1, 1),
+       (4, '2026-04-30', 2, 1, 1, 1),
+       (5, '2026-05-01', 1, 1, 1, 1),
+       (6, '2026-05-01', 2, 1, 1, 1),
+       (7, '2026-05-02', 1, 1, 1, 1),
+       (8, '2026-05-03', 1, 1, 1, 1),
+       (9, '2026-05-04', 1, 1, 1, 1),
+       (10, '2026-05-05', 1, 1, 1, 1);
 
 -- Theme 2: 기간 내 예약 9개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (11, '2026-04-29', 1, 2, 1),
-       (12, '2026-04-29', 2, 2, 1),
-       (13, '2026-04-30', 1, 2, 1),
-       (14, '2026-04-30', 2, 2, 1),
-       (15, '2026-05-01', 1, 2, 1),
-       (16, '2026-05-01', 2, 2, 1),
-       (17, '2026-05-02', 1, 2, 1),
-       (18, '2026-05-03', 1, 2, 1),
-       (19, '2026-05-04', 1, 2, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (11, '2026-04-29', 1, 2, 1, 1),
+       (12, '2026-04-29', 2, 2, 1, 1),
+       (13, '2026-04-30', 1, 2, 1, 1),
+       (14, '2026-04-30', 2, 2, 1, 1),
+       (15, '2026-05-01', 1, 2, 1, 1),
+       (16, '2026-05-01', 2, 2, 1, 1),
+       (17, '2026-05-02', 1, 2, 1, 1),
+       (18, '2026-05-03', 1, 2, 1, 1),
+       (19, '2026-05-04', 1, 2, 1, 1);
 
 -- Theme 3: 기간 내 예약 8개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (20, '2026-04-29', 1, 3, 1),
-       (21, '2026-04-29', 2, 3, 1),
-       (22, '2026-04-30', 1, 3, 1),
-       (23, '2026-04-30', 2, 3, 1),
-       (24, '2026-05-01', 1, 3, 1),
-       (25, '2026-05-01', 2, 3, 1),
-       (26, '2026-05-02', 1, 3, 1),
-       (27, '2026-05-03', 1, 3, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (20, '2026-04-29', 1, 3, 1, 1),
+       (21, '2026-04-29', 2, 3, 1, 1),
+       (22, '2026-04-30', 1, 3, 1, 1),
+       (23, '2026-04-30', 2, 3, 1, 1),
+       (24, '2026-05-01', 1, 3, 1, 1),
+       (25, '2026-05-01', 2, 3, 1, 1),
+       (26, '2026-05-02', 1, 3, 1, 1),
+       (27, '2026-05-03', 1, 3, 1, 1);
 
 -- Theme 4: 기간 내 예약 7개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (28, '2026-04-29', 1, 4, 1),
-       (29, '2026-04-29', 2, 4, 1),
-       (30, '2026-04-30', 1, 4, 1),
-       (31, '2026-04-30', 2, 4, 1),
-       (32, '2026-05-01', 1, 4, 1),
-       (33, '2026-05-01', 2, 4, 1),
-       (34, '2026-05-02', 1, 4, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (28, '2026-04-29', 1, 4, 1, 1),
+       (29, '2026-04-29', 2, 4, 1, 1),
+       (30, '2026-04-30', 1, 4, 1, 1),
+       (31, '2026-04-30', 2, 4, 1, 1),
+       (32, '2026-05-01', 1, 4, 1, 1),
+       (33, '2026-05-01', 2, 4, 1, 1),
+       (34, '2026-05-02', 1, 4, 1, 1);
 
 -- Theme 5: 기간 내 예약 6개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (35, '2026-04-29', 1, 5, 1),
-       (36, '2026-04-29', 2, 5, 1),
-       (37, '2026-04-30', 1, 5, 1),
-       (38, '2026-04-30', 2, 5, 1),
-       (39, '2026-05-01', 1, 5, 1),
-       (40, '2026-05-01', 2, 5, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (35, '2026-04-29', 1, 5, 1, 1),
+       (36, '2026-04-29', 2, 5, 1, 1),
+       (37, '2026-04-30', 1, 5, 1, 1),
+       (38, '2026-04-30', 2, 5, 1, 1),
+       (39, '2026-05-01', 1, 5, 1, 1),
+       (40, '2026-05-01', 2, 5, 1, 1);
 
 -- Theme 6: 기간 내 예약 5개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (41, '2026-04-29', 1, 6, 1),
-       (42, '2026-04-29', 2, 6, 1),
-       (43, '2026-04-30', 1, 6, 1),
-       (44, '2026-04-30', 2, 6, 1),
-       (45, '2026-05-01', 1, 6, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (41, '2026-04-29', 1, 6, 1, 1),
+       (42, '2026-04-29', 2, 6, 1, 1),
+       (43, '2026-04-30', 1, 6, 1, 1),
+       (44, '2026-04-30', 2, 6, 1, 1),
+       (45, '2026-05-01', 1, 6, 1, 1);
 
 -- Theme 7: 기간 내 예약 4개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (46, '2026-04-29', 1, 7, 1),
-       (47, '2026-04-29', 2, 7, 1),
-       (48, '2026-04-30', 1, 7, 1),
-       (49, '2026-04-30', 2, 7, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (46, '2026-04-29', 1, 7, 1, 1),
+       (47, '2026-04-29', 2, 7, 1, 1),
+       (48, '2026-04-30', 1, 7, 1, 1),
+       (49, '2026-04-30', 2, 7, 1, 1);
 
 -- Theme 8: 기간 내 예약 3개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (50, '2026-04-29', 1, 8, 1),
-       (51, '2026-04-29', 2, 8, 1),
-       (52, '2026-04-30', 1, 8, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (50, '2026-04-29', 1, 8, 1, 1),
+       (51, '2026-04-29', 2, 8, 1, 1),
+       (52, '2026-04-30', 1, 8, 1, 1);
 
 -- Theme 9: 기간 내 예약 2개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (53, '2026-04-29', 1, 9, 1),
-       (54, '2026-04-29', 2, 9, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (53, '2026-04-29', 1, 9, 1, 1),
+       (54, '2026-04-29', 2, 9, 1, 1);
 
 -- Theme 10: 기간 내 예약 1개
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (55, '2026-04-29', 1, 10, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (55, '2026-04-29', 1, 10, 1, 1);
 
 -- Theme 11: 기간 밖 예약만 있음
-INSERT INTO reservation (id, date, time_id, theme_id, member_id)
-VALUES (56, '2026-04-28', 1, 11, 1),
-       (57, '2026-05-06', 1, 11, 1),
-       (58, '2026-05-06', 2, 11, 1);
+INSERT INTO reservation (id, date, time_id, theme_id, member_id, store_id)
+VALUES (56, '2026-04-28', 1, 11, 1, 1),
+       (57, '2026-05-06', 1, 11, 1, 1),
+       (58, '2026-05-06', 2, 11, 1, 1);
 
 -- Theme 12: 예약 없음
 
 ALTER TABLE member
     ALTER COLUMN id RESTART WITH 2;
+ALTER TABLE store
+    ALTER COLUMN id RESTART WITH 3;
 ALTER TABLE theme
     ALTER COLUMN id RESTART WITH 13;
 ALTER TABLE reservation_time
