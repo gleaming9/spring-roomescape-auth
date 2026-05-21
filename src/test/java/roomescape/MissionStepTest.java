@@ -308,6 +308,20 @@ public class MissionStepTest {
     }
 
     @Test
+    @DisplayName("로그인하지 않은 사용자는 관리 예약 API를 사용할 수 없다.")
+    void adminReservationApis_withoutLogin_returnUnauthorized() {
+        RestAssured.given().log().all()
+                .when().get("/admin/reservations")
+                .then().log().all()
+                .statusCode(401);
+
+        RestAssured.given().log().all()
+                .when().delete("/admin/reservations/1")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
     @DisplayName("내 예약 조회는 현재 로그인한 사용자의 예약만 반환한다.")
     void findMyReservations_returnsOnlyLoginMemberReservations() {
         AuthenticatedMember brown = createMemberAndLogin("브라운");
@@ -459,6 +473,7 @@ public class MissionStepTest {
                 .body("theme.id", is(themeId));
 
         RestAssured.given().log().all()
+                .cookie("JSESSIONID", member.sessionId())
                 .when().get("/admin/reservations")
                 .then().log().all()
                 .statusCode(200)
