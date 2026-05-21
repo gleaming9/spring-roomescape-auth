@@ -53,8 +53,8 @@ public class Member {
         if (role == Role.MANAGER && storeId == null) {
             throw new InvalidRequestException("매니저의 매장은 비어 있을 수 없습니다.");
         }
-        if (role == Role.USER && storeId != null) {
-            throw new InvalidRequestException("일반 회원은 관리 매장을 가질 수 없습니다.");
+        if (role != Role.MANAGER && storeId != null) {
+            throw new InvalidRequestException("관리자가 아닌 회원은 관리 매장을 가질 수 없습니다.");
         }
     }
 

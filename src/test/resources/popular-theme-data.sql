@@ -13,8 +13,8 @@
 -- Theme 11: 기간 밖 예약만 있음
 -- Theme 12: 예약 없음
 
-INSERT INTO member (id, email, password, name)
-VALUES (1, 'popular@example.com', '$2a$10$ehrv167owuDhm9r4S9gK5.KRBjVZt1l1XuuJKjyjGdioSqYflUaGm', '인기테마테스트');
+INSERT INTO member (id, email, password, name, role, store_id)
+VALUES (1, 'popular@example.com', '$2a$10$ehrv167owuDhm9r4S9gK5.KRBjVZt1l1XuuJKjyjGdioSqYflUaGm', '인기테마테스트', 'USER', NULL);
 
 INSERT INTO store (id, name)
 VALUES (1, '우테코 강남점'),

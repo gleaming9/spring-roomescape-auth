@@ -1,6 +1,7 @@
-INSERT INTO member (id, email, password, name)
-VALUES (1, 'brown@example.com', '$2a$10$oQHYDAbw.CEJjCIwDX8nf.K7NErkkOgdqo00e0NKO.YCZJqS4XOjK', '브라운'),
-       (2, 'demo@example.com', '$2a$10$dDQNmrl1tIajnwq.Qrs58ekHaMn.yUvHWWCqsFFHzOOd4PqyOzVq.', '데모');
+INSERT INTO member (id, email, password, name, role, store_id)
+VALUES (1, 'brown@example.com', '$2a$10$oQHYDAbw.CEJjCIwDX8nf.K7NErkkOgdqo00e0NKO.YCZJqS4XOjK', '브라운', 'USER', NULL),
+       (2, 'demo@example.com', '$2a$10$dDQNmrl1tIajnwq.Qrs58ekHaMn.yUvHWWCqsFFHzOOd4PqyOzVq.', '데모', 'USER', NULL),
+       (3, 'admin@example.com', '$2a$10$dDQNmrl1tIajnwq.Qrs58ekHaMn.yUvHWWCqsFFHzOOd4PqyOzVq.', '어드민', 'ADMIN', NULL);
 
 INSERT INTO store (id, name)
 VALUES (1, '우테코 강남점'),
@@ -89,7 +90,7 @@ VALUES (1, '2026-04-29', 1, 1, 2, 1),
        (58, '2026-04-28', 1, 11, 2, 1);
 
 ALTER TABLE member
-    ALTER COLUMN id RESTART WITH 3;
+    ALTER COLUMN id RESTART WITH 4;
 ALTER TABLE store
     ALTER COLUMN id RESTART WITH 3;
 ALTER TABLE theme
