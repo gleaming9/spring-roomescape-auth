@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import roomescape.auth.support.AdminCheckInterceptor;
 import roomescape.auth.support.LoginCheckInterceptor;
 import roomescape.auth.support.LoginMemberArgumentResolver;
 
@@ -12,11 +13,14 @@ import java.util.List;
 @Configuration
 public class AuthenticationConfig implements WebMvcConfigurer {
     private final LoginCheckInterceptor loginCheckInterceptor;
+    private final AdminCheckInterceptor adminCheckInterceptor;
     private final LoginMemberArgumentResolver loginMemberArgumentResolver;
 
     public AuthenticationConfig(LoginCheckInterceptor loginCheckInterceptor,
+                                AdminCheckInterceptor adminCheckInterceptor,
                                 LoginMemberArgumentResolver loginMemberArgumentResolver) {
         this.loginCheckInterceptor = loginCheckInterceptor;
+        this.adminCheckInterceptor = adminCheckInterceptor;
         this.loginMemberArgumentResolver = loginMemberArgumentResolver;
     }
 
@@ -26,7 +30,15 @@ public class AuthenticationConfig implements WebMvcConfigurer {
                 .addPathPatterns(
                         "/members/me",
                         "/reservations/**",
-                        "/admin/reservations/**"
+                        "/admin/reservations/**",
+                        "/admin/themes/**",
+                        "/admin/times/**"
+                );
+
+        registry.addInterceptor(adminCheckInterceptor)
+                .addPathPatterns(
+                        "/admin/themes/**",
+                        "/admin/times/**"
                 );
     }
 

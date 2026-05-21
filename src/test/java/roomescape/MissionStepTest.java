@@ -433,6 +433,85 @@ public class MissionStepTest {
     }
 
     @Test
+    @DisplayName("로그인하지 않은 사용자는 테마와 시간 관리 API를 사용할 수 없다.")
+    void adminThemeAndTimeApis_withoutLogin_returnUnauthorized() {
+        Map<String, String> time = new HashMap<>();
+        time.put("startAt", "10:00");
+
+        Map<String, String> theme = new HashMap<>();
+        theme.put("name", "관리 API 인증 테스트");
+        theme.put("description", "관리 API 인증 테스트용 테마");
+        theme.put("thumbnail", "https://example.com/theme.png");
+
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(time)
+                .when().post("/admin/times")
+                .then().log().all()
+                .statusCode(401);
+
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(theme)
+                .when().post("/admin/themes")
+                .then().log().all()
+                .statusCode(401);
+
+        RestAssured.given().log().all()
+                .when().delete("/admin/times/1")
+                .then().log().all()
+                .statusCode(401);
+
+        RestAssured.given().log().all()
+                .when().delete("/admin/themes/1")
+                .then().log().all()
+                .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("관리자가 아닌 회원은 테마와 시간 관리 API를 사용할 수 없다.")
+    void adminThemeAndTimeApis_withNonAdmin_returnForbidden() {
+        AuthenticatedMember user = createMemberAndLogin("브라운");
+        AuthenticatedMember manager = createMemberAndLogin("강남매니저", Role.MANAGER, (long) DEFAULT_STORE_ID);
+
+        Map<String, String> time = new HashMap<>();
+        time.put("startAt", "10:00");
+
+        Map<String, String> theme = new HashMap<>();
+        theme.put("name", "관리 API 인가 테스트");
+        theme.put("description", "관리 API 인가 테스트용 테마");
+        theme.put("thumbnail", "https://example.com/theme.png");
+
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", user.sessionId())
+                .body(time)
+                .when().post("/admin/times")
+                .then().log().all()
+                .statusCode(403);
+
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", manager.sessionId())
+                .body(theme)
+                .when().post("/admin/themes")
+                .then().log().all()
+                .statusCode(403);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", user.sessionId())
+                .when().delete("/admin/times/1")
+                .then().log().all()
+                .statusCode(403);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", manager.sessionId())
+                .when().delete("/admin/themes/1")
+                .then().log().all()
+                .statusCode(403);
+    }
+
+    @Test
     @DisplayName("내 예약 조회는 현재 로그인한 사용자의 예약만 반환한다.")
     void findMyReservations_returnsOnlyLoginMemberReservations() {
         AuthenticatedMember brown = createMemberAndLogin("브라운");
@@ -487,15 +566,33 @@ public class MissionStepTest {
     }
 
     @Test
-    @DisplayName("시간 관리 API")
-    void timeManagementApi() {
-        Map<String, String> params = new HashMap<>();
-        params.put("startAt", "10:00");
+    @DisplayName("관리자는 테마와 시간 관리 API를 사용할 수 있다.")
+    void adminThemeAndTimeApis_withAdmin_canManageThemeAndTime() {
+        AuthenticatedMember admin = createMemberAndLogin("어드민", Role.ADMIN, null);
+
+        Map<String, String> time = new HashMap<>();
+        time.put("startAt", "10:00");
+
+        Map<String, String> theme = new HashMap<>();
+        theme.put("name", "관리자 관리 테스트");
+        theme.put("description", "관리자 관리 테스트용 테마");
+        theme.put("thumbnail", "https://example.com/theme.png");
 
         int timeId = RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
-                .body(params)
+                .cookie("JSESSIONID", admin.sessionId())
+                .body(time)
                 .when().post("/admin/times")
+                .then().log().all()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        int themeId = RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", admin.sessionId())
+                .body(theme)
+                .when().post("/admin/themes")
                 .then().log().all()
                 .statusCode(201)
                 .extract()
@@ -508,7 +605,14 @@ public class MissionStepTest {
                 .body("times.find { it.id == " + timeId + " }.startAt", is("10:00"));
 
         RestAssured.given().log().all()
+                .cookie("JSESSIONID", admin.sessionId())
                 .when().delete("/admin/times/" + timeId)
+                .then().log().all()
+                .statusCode(204);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", admin.sessionId())
+                .when().delete("/admin/themes/" + themeId)
                 .then().log().all()
                 .statusCode(204);
     }
@@ -516,11 +620,14 @@ public class MissionStepTest {
     @Test
     @DisplayName("중복된 예약 시간을 추가하면 conflict를 반환한다.")
     void createDuplicatedReservationTime_returnsConflict() {
+        AuthenticatedMember admin = createMemberAndLogin("어드민", Role.ADMIN, null);
+
         Map<String, String> params = new HashMap<>();
         params.put("startAt", "10:00");
 
         RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", admin.sessionId())
                 .body(params)
                 .when().post("/admin/times")
                 .then().log().all()
@@ -528,6 +635,7 @@ public class MissionStepTest {
 
         RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", admin.sessionId())
                 .body(params)
                 .when().post("/admin/times")
                 .then().log().all()
@@ -553,6 +661,7 @@ public class MissionStepTest {
 
         int timeId = RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", admin.sessionId())
                 .body(time)
                 .when().post("/admin/times")
                 .then().log().all()
@@ -562,6 +671,7 @@ public class MissionStepTest {
 
         int themeId = RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", admin.sessionId())
                 .body(theme)
                 .when().post("/admin/themes")
                 .then().log().all()
@@ -603,9 +713,11 @@ public class MissionStepTest {
         theme.put("description", "예약 가능 시간 테스트용 테마");
         theme.put("thumbnail", "https://example.com/availability-theme.png");
         String date = LocalDate.now().plusDays(1).toString();
+        AuthenticatedMember admin = createMemberAndLogin("어드민", Role.ADMIN, null);
 
         int timeId = RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", admin.sessionId())
                 .body(time)
                 .when().post("/admin/times")
                 .then().log().all()
@@ -615,6 +727,7 @@ public class MissionStepTest {
 
         int themeId = RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", admin.sessionId())
                 .body(theme)
                 .when().post("/admin/themes")
                 .then().log().all()
@@ -688,6 +801,10 @@ public class MissionStepTest {
         return new AuthenticatedMember(member.id(), member.email(), member.name(), sessionId);
     }
 
+    private AuthenticatedMember createAdminAndLogin() {
+        return createMemberAndLogin("어드민", Role.ADMIN, null);
+    }
+
     private AuthenticatedMember saveMember(String name) {
         return saveMember(name, Role.USER, null);
     }
@@ -714,11 +831,16 @@ public class MissionStepTest {
     }
 
     private int createTime(String startAt) {
+        return createTime(startAt, createAdminAndLogin().sessionId());
+    }
+
+    private int createTime(String startAt, String sessionId) {
         Map<String, String> time = new HashMap<>();
         time.put("startAt", startAt);
 
         return RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", sessionId)
                 .body(time)
                 .when().post("/admin/times")
                 .then().log().all()
@@ -728,6 +850,10 @@ public class MissionStepTest {
     }
 
     private int createTheme(String name) {
+        return createTheme(name, createAdminAndLogin().sessionId());
+    }
+
+    private int createTheme(String name, String sessionId) {
         Map<String, String> theme = new HashMap<>();
         theme.put("name", name);
         theme.put("description", name + " 설명");
@@ -735,6 +861,7 @@ public class MissionStepTest {
 
         return RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
+                .cookie("JSESSIONID", sessionId)
                 .body(theme)
                 .when().post("/admin/themes")
                 .then().log().all()
