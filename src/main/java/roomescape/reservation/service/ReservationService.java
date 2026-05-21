@@ -2,7 +2,9 @@ package roomescape.reservation.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import roomescape.auth.support.LoginMemberInfo;
 import roomescape.global.exception.ConflictException;
+import roomescape.global.exception.ForbiddenException;
 import roomescape.global.exception.InvalidRequestException;
 import roomescape.global.exception.NotFoundException;
 import roomescape.member.domain.Member;
@@ -41,8 +43,15 @@ public class ReservationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Reservation> findAll() {
-        return reservationRepository.findAll();
+    public List<Reservation> findReservationsForManagement(LoginMemberInfo loginMember) {
+        if (loginMember.isAdmin()) {
+            return reservationRepository.findAll();
+        }
+        if (loginMember.isManager()) {
+            return reservationRepository.findByStoreId(loginMember.storeId());
+        }
+
+        throw new ForbiddenException("예약을 관리할 권한이 없습니다.");
     }
 
     @Transactional
@@ -119,8 +128,31 @@ public class ReservationService {
     }
 
     @Transactional
-    public void delete(Long id) {
-        reservationRepository.deleteById(id);
+    public void deleteReservationForManagement(Long id, LoginMemberInfo loginMember) {
+        if (loginMember.isAdmin()) {
+            reservationRepository.deleteById(id);
+            return;
+        }
+        if (loginMember.isManager()) {
+            deleteStoreManagerReservation(id, loginMember);
+            return;
+        }
+
+        throw new ForbiddenException("예약을 관리할 권한이 없습니다.");
+    }
+
+    private void deleteStoreManagerReservation(Long id, LoginMemberInfo loginMember) {
+        Optional<Reservation> foundReservation = reservationRepository.findById(id);
+        if (foundReservation.isEmpty()) {
+            return;
+        }
+
+        Reservation reservation = foundReservation.get();
+        if (!loginMember.canManageStore(reservation.getStoreId())) {
+            throw new ForbiddenException("예약을 관리할 권한이 없습니다.");
+        }
+
+        reservationRepository.deleteById(reservation.getId());
     }
 
     private ReservationTime findTime(Long timeId) {

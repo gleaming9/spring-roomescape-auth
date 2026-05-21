@@ -3,6 +3,8 @@ package roomescape.auth.support;
 import roomescape.member.domain.Member;
 import roomescape.member.domain.Role;
 
+import java.util.Objects;
+
 public record LoginMemberInfo(
         Long id,
         String email,
@@ -18,5 +20,21 @@ public record LoginMemberInfo(
                 member.getRole(),
                 member.getStoreId()
         );
+    }
+
+    public boolean isAdmin() {
+        return role == Role.ADMIN;
+    }
+
+    public boolean isManager() {
+        return role == Role.MANAGER;
+    }
+
+    public boolean canManageStore(Long storeId) {
+        if (isAdmin()) {
+            return true;
+        }
+
+        return isManager() && Objects.equals(this.storeId, storeId);
     }
 }

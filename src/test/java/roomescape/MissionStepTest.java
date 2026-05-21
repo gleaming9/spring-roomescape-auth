@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import roomescape.auth.support.PasswordEncoder;
+import roomescape.member.domain.Role;
 import roomescape.reservation.controller.ReservationController;
 
 import java.lang.reflect.Field;
@@ -26,6 +27,7 @@ import static org.hamcrest.Matchers.notNullValue;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class MissionStepTest {
     private static final int DEFAULT_STORE_ID = 1;
+    private static final int OTHER_STORE_ID = 2;
 
     @Autowired
     private ReservationController reservationController;
@@ -322,6 +324,115 @@ public class MissionStepTest {
     }
 
     @Test
+    @DisplayName("일반 회원은 관리 예약 API를 사용할 수 없다.")
+    void adminReservationApis_withUser_returnsForbidden() {
+        AuthenticatedMember user = createMemberAndLogin("브라운");
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", user.sessionId())
+                .when().get("/admin/reservations")
+                .then().log().all()
+                .statusCode(403);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", user.sessionId())
+                .when().delete("/admin/reservations/1")
+                .then().log().all()
+                .statusCode(403);
+    }
+
+    @Test
+    @DisplayName("매니저는 자기 매장 예약만 조회할 수 있다.")
+    void findAdminReservations_withManager_returnsOnlyOwnStoreReservations() {
+        AuthenticatedMember manager = createMemberAndLogin("강남매니저", Role.MANAGER, (long) DEFAULT_STORE_ID);
+        AuthenticatedMember user = createMemberAndLogin("브라운");
+        String date = LocalDate.now().plusDays(1).toString();
+        int timeId = createTime("10:00");
+        int otherTimeId = createTime("11:00");
+        int themeId = createTheme("매니저 예약 조회 테스트");
+
+        int ownStoreReservationId = createReservation(user.sessionId(), DEFAULT_STORE_ID, date, timeId, themeId);
+        createReservation(user.sessionId(), OTHER_STORE_ID, date, otherTimeId, themeId);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", manager.sessionId())
+                .when().get("/admin/reservations")
+                .then().log().all()
+                .statusCode(200)
+                .body("reservations.size()", is(1))
+                .body("reservations[0].id", is(ownStoreReservationId))
+                .body("reservations[0].storeId", is(DEFAULT_STORE_ID));
+    }
+
+    @Test
+    @DisplayName("매니저는 자기 매장 예약만 삭제할 수 있다.")
+    void deleteAdminReservation_withManager_deletesOnlyOwnStoreReservation() {
+        AuthenticatedMember manager = createMemberAndLogin("강남매니저", Role.MANAGER, (long) DEFAULT_STORE_ID);
+        AuthenticatedMember user = createMemberAndLogin("브라운");
+        String date = LocalDate.now().plusDays(1).toString();
+        int timeId = createTime("10:00");
+        int otherTimeId = createTime("11:00");
+        int themeId = createTheme("매니저 예약 삭제 테스트");
+
+        int ownStoreReservationId = createReservation(user.sessionId(), DEFAULT_STORE_ID, date, timeId, themeId);
+        int otherStoreReservationId = createReservation(user.sessionId(), OTHER_STORE_ID, date, otherTimeId, themeId);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", manager.sessionId())
+                .when().delete("/admin/reservations/" + otherStoreReservationId)
+                .then().log().all()
+                .statusCode(403);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", manager.sessionId())
+                .when().delete("/admin/reservations/" + ownStoreReservationId)
+                .then().log().all()
+                .statusCode(204);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", manager.sessionId())
+                .when().get("/admin/reservations")
+                .then().log().all()
+                .statusCode(200)
+                .body("reservations.size()", is(0));
+    }
+
+    @Test
+    @DisplayName("관리자는 모든 매장 예약을 조회하고 삭제할 수 있다.")
+    void adminReservationApis_withAdmin_canManageAllStoreReservations() {
+        AuthenticatedMember admin = createMemberAndLogin("어드민", Role.ADMIN, null);
+        AuthenticatedMember user = createMemberAndLogin("브라운");
+        String date = LocalDate.now().plusDays(1).toString();
+        int timeId = createTime("10:00");
+        int otherTimeId = createTime("11:00");
+        int themeId = createTheme("관리자 예약 관리 테스트");
+
+        int firstReservationId = createReservation(user.sessionId(), DEFAULT_STORE_ID, date, timeId, themeId);
+        int secondReservationId = createReservation(user.sessionId(), OTHER_STORE_ID, date, otherTimeId, themeId);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", admin.sessionId())
+                .when().get("/admin/reservations")
+                .then().log().all()
+                .statusCode(200)
+                .body("reservations.size()", is(2));
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", admin.sessionId())
+                .when().delete("/admin/reservations/" + secondReservationId)
+                .then().log().all()
+                .statusCode(204);
+
+        RestAssured.given().log().all()
+                .cookie("JSESSIONID", admin.sessionId())
+                .when().get("/admin/reservations")
+                .then().log().all()
+                .statusCode(200)
+                .body("reservations.size()", is(1))
+                .body("reservations[0].id", is(firstReservationId));
+    }
+
+    @Test
     @DisplayName("내 예약 조회는 현재 로그인한 사용자의 예약만 반환한다.")
     void findMyReservations_returnsOnlyLoginMemberReservations() {
         AuthenticatedMember brown = createMemberAndLogin("브라운");
@@ -438,6 +549,7 @@ public class MissionStepTest {
         reservation.put("storeId", DEFAULT_STORE_ID);
         reservation.put("date", LocalDate.now().plusDays(1).toString());
         AuthenticatedMember member = createMemberAndLogin("브라운");
+        AuthenticatedMember admin = createMemberAndLogin("어드민", Role.ADMIN, null);
 
         int timeId = RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
@@ -473,7 +585,7 @@ public class MissionStepTest {
                 .body("theme.id", is(themeId));
 
         RestAssured.given().log().all()
-                .cookie("JSESSIONID", member.sessionId())
+                .cookie("JSESSIONID", admin.sessionId())
                 .when().get("/admin/reservations")
                 .then().log().all()
                 .statusCode(200)
@@ -554,7 +666,11 @@ public class MissionStepTest {
     }
 
     private AuthenticatedMember createMemberAndLogin(String name) {
-        AuthenticatedMember member = saveMember(name);
+        return createMemberAndLogin(name, Role.USER, null);
+    }
+
+    private AuthenticatedMember createMemberAndLogin(String name, Role role, Long storeId) {
+        AuthenticatedMember member = saveMember(name, role, storeId);
 
         Map<String, String> loginRequest = new HashMap<>();
         loginRequest.put("email", member.email());
@@ -573,13 +689,19 @@ public class MissionStepTest {
     }
 
     private AuthenticatedMember saveMember(String name) {
+        return saveMember(name, Role.USER, null);
+    }
+
+    private AuthenticatedMember saveMember(String name, Role role, Long storeId) {
         String email = UUID.randomUUID() + "@example.com";
         String encodedPassword = passwordEncoder.encode("password");
         jdbcTemplate.update(
-                "INSERT INTO member (email, password, name) VALUES (?, ?, ?)",
+                "INSERT INTO member (email, password, name, role, store_id) VALUES (?, ?, ?, ?, ?)",
                 email,
                 encodedPassword,
-                name
+                name,
+                role.name(),
+                storeId
         );
 
         Long memberId = jdbcTemplate.queryForObject(
@@ -622,8 +744,12 @@ public class MissionStepTest {
     }
 
     private int createReservation(String sessionId, String date, int timeId, int themeId) {
+        return createReservation(sessionId, DEFAULT_STORE_ID, date, timeId, themeId);
+    }
+
+    private int createReservation(String sessionId, int storeId, String date, int timeId, int themeId) {
         Map<String, Object> reservation = new HashMap<>();
-        reservation.put("storeId", DEFAULT_STORE_ID);
+        reservation.put("storeId", storeId);
         reservation.put("date", date);
         reservation.put("timeId", timeId);
         reservation.put("themeId", themeId);

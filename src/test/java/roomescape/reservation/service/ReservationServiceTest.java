@@ -7,11 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import roomescape.auth.support.LoginMemberInfo;
 import roomescape.auth.support.PasswordEncoder;
 import roomescape.global.exception.ConflictException;
 import roomescape.global.exception.InvalidRequestException;
 import roomescape.global.exception.NotFoundException;
 import roomescape.member.domain.Member;
+import roomescape.member.domain.Role;
 import roomescape.member.repository.MemberRepository;
 import roomescape.reservation.domain.Reservation;
 import roomescape.reservation.repository.ReservationRepository;
@@ -83,7 +85,7 @@ class ReservationServiceTest {
         Reservation reservation = createReservation(NAME, FUTURE_DATE, time, theme);
 
         // then
-        assertThat(reservationService.findAll()).containsExactly(reservation);
+        assertThat(reservationRepository.findAll()).containsExactly(reservation);
     }
 
     @Test
@@ -111,7 +113,7 @@ class ReservationServiceTest {
         assertThatThrownBy(() -> createReservation(NAME, PAST_DATE, time, theme))
                 .isInstanceOf(InvalidRequestException.class);
 
-        assertThat(reservationService.findAll()).isEmpty();
+        assertThat(reservationRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -156,26 +158,26 @@ class ReservationServiceTest {
     }
 
     @Test
-    @DisplayName("예약을 삭제한다.")
-    public void delete_success() {
+    @DisplayName("관리자가 예약을 삭제한다.")
+    public void deleteReservationForManagement_success_whenAdmin() {
         // given
         Reservation reservation = createDefaultReservation();
 
         // when
-        reservationService.delete(reservation.getId());
+        reservationService.deleteReservationForManagement(reservation.getId(), admin());
 
         // then
-        assertThat(reservationService.findAll()).isEmpty();
+        assertThat(reservationRepository.findAll()).isEmpty();
     }
 
     @Test
-    @DisplayName("존재하지 않는 예약 삭제를 요청해도 성공한다.")
-    public void delete_success_whenReservationNotFound() {
+    @DisplayName("관리자가 존재하지 않는 예약 삭제를 요청해도 성공한다.")
+    public void deleteReservationForManagement_success_whenAdminAndReservationNotFound() {
         // when
-        reservationService.delete(NOT_FOUND_ID);
+        reservationService.deleteReservationForManagement(NOT_FOUND_ID, admin());
 
         // then
-        assertThat(reservationService.findAll()).isEmpty();
+        assertThat(reservationRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -188,7 +190,7 @@ class ReservationServiceTest {
         reservationService.cancel(reservation.getId(), reservation.getMember().getId());
 
         // then
-        assertThat(reservationService.findAll()).isEmpty();
+        assertThat(reservationRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -213,7 +215,7 @@ class ReservationServiceTest {
         reservationService.cancel(NOT_FOUND_ID, member.getId());
 
         // then
-        assertThat(reservationService.findAll()).isEmpty();
+        assertThat(reservationRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -246,7 +248,7 @@ class ReservationServiceTest {
         assertThat(updatedReservation.getDate()).isEqualTo(NEXT_FUTURE_DATE);
         assertThat(updatedReservation.getTime()).isEqualTo(newTime);
 
-        Reservation savedReservation = reservationService.findAll().get(0);
+        Reservation savedReservation = reservationRepository.findAll().get(0);
         assertThat(savedReservation.getDate()).isEqualTo(NEXT_FUTURE_DATE);
         assertThat(savedReservation.getTime()).isEqualTo(newTime);
     }
@@ -351,5 +353,9 @@ class ReservationServiceTest {
 
     private Member saveMember(String name) {
         return memberRepository.save(new Member(UUID.randomUUID() + "@example.com", passwordEncoder.encode("password"), name));
+    }
+
+    private LoginMemberInfo admin() {
+        return new LoginMemberInfo(0L, "admin@example.com", "관리자", Role.ADMIN, null);
     }
 }

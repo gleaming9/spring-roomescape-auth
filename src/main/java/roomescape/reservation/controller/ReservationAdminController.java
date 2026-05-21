@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import roomescape.auth.support.LoginMember;
+import roomescape.auth.support.LoginMemberInfo;
 import roomescape.reservation.dto.ReservationResponse;
 import roomescape.reservation.dto.ReservationsResponse;
 import roomescape.reservation.service.ReservationService;
@@ -21,17 +23,18 @@ public class ReservationAdminController {
     }
 
     @GetMapping
-    public ResponseEntity<ReservationsResponse> list() {
+    public ResponseEntity<ReservationsResponse> list(@LoginMember LoginMemberInfo loginMember) {
         return ResponseEntity.ok(
-                ReservationsResponse.from(reservationService.findAll()
+                ReservationsResponse.from(reservationService.findReservationsForManagement(loginMember)
                         .stream()
                         .map(ReservationResponse::from)
                         .toList()));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@Positive(message = "예약 id는 1 이상의 숫자여야 합니다.") @PathVariable Long id) {
-        reservationService.delete(id);
+    public ResponseEntity<Void> delete(@Positive(message = "예약 id는 1 이상의 숫자여야 합니다.") @PathVariable Long id,
+                                       @LoginMember LoginMemberInfo loginMember) {
+        reservationService.deleteReservationForManagement(id, loginMember);
         return ResponseEntity.noContent().build();
     }
 }

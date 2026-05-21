@@ -126,6 +126,38 @@ public class JdbcReservationRepository implements ReservationRepository {
     }
 
     @Override
+    public List<Reservation> findByStoreId(Long storeId) {
+        String sql = """
+                SELECT
+                    r.id AS reservation_id,
+                    r.store_id,
+                    r.date,
+                    m.id AS member_id,
+                    m.email AS member_email,
+                    m.password AS member_password,
+                    m.name AS member_name,
+                    m.role AS member_role,
+                    m.store_id AS member_store_id,
+                    t.id AS time_id,
+                    t.start_at,
+                    th.id AS theme_id,
+                    th.name AS theme_name,
+                    th.description AS theme_description,
+                    th.thumbnail AS theme_thumbnail
+                FROM reservation r
+                INNER JOIN member m
+                    ON r.member_id = m.id
+                INNER JOIN reservation_time t
+                    ON r.time_id = t.id
+                INNER JOIN theme th
+                    ON r.theme_id = th.id
+                WHERE r.store_id = ?
+                """;
+
+        return jdbcTemplate.query(sql, reservationRowMapper, storeId);
+    }
+
+    @Override
     public Optional<Reservation> findById(Long id) {
         String sql = """
                 SELECT
